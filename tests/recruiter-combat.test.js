@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRecruiterBumpGate, createRecruiterDuel, PM_ATTACK_MS,
-  PM_FALL_MS, PM_GROUND_MS, PM_RECOVER_MS } from '../src/recruiter-combat.js';
+  PM_FALL_MS, PM_GROUND_MS, PM_RECOVER_MS, PM_SLAM_MS, PM_SLAM_COOLDOWN_MS } from '../src/recruiter-combat.js';
 
 const home = { x: 0, z: 0, rotation: 0 }, landing = { x: 1.2, z: .22 };
-function fixture() {
+function fixture({ initialAttack } = {}) {
   const duel = createRecruiterDuel({ home, landing });
   let now = 10_000;
-  assert.equal(duel.start({ id: 'encounter-a', ownerId: 'visitor-a', startedAt: now }), true);
-  const player = { x: landing.x, z: landing.z + .91, rotation: Math.PI };
+  assert.equal(duel.start({ id: 'encounter-a', ownerId: 'visitor-a', startedAt: now }, { initialAttack, now }), true);
+  const start = initialAttack ? home : landing;
+  const player = { x: start.x, z: start.z + .91, rotation: Math.PI };
   const options = { player };
   const tick = (duration, extra = {}) => {
     let impacts = [];
@@ -45,9 +46,9 @@ test('three separated deliberate contacts count while quick repeated taps are re
   assert.equal(gate.update('chair', Infinity), false);
 });
 
-test('the recruiter falls, pauses, recovers and approaches before controls can attack', () => {
+test('the recruiter falls, pauses, recovers and approaches while player strikes remain available', () => {
   const f = fixture();
-  assert.equal(f.duel.attack('punch', f.now()), false);
+  assert.equal(f.duel.attack('punch', f.now()), true);
   f.tick(PM_FALL_MS - 25); assert.equal(f.duel.getState().phase, 'falling');
   f.tick(25); assert.equal(f.duel.getState().phase, 'grounded');
   assert.deepEqual({ x: f.duel.getState().x, z: f.duel.getState().z }, landing);
@@ -328,4 +329,194 @@ test('a close chase stays within the twelve-unit home leash and returns without 
   const result = outside.update(25, { now: 1025, player: { x: 11.1, z: 0, rotation: Math.PI / 2 } });
   assert.equal(result.state.phase, 'returning', 'a recruiter outside the leash returns even when the player remains inside');
   assert.equal(result.state.x, snapshot.x, 'the first return frame preserves the actual outside position');
+});
+
+test('a direct punch starts seated and knocks the recruiter down only at actual contact', () => {
+  const f = fixture({ initialAttack: 'punch' });
+  assert.equal(f.duel.getState().phase, 'provoking');
+  assert.deepEqual({ x: f.duel.getState().x, z: f.duel.getState().z }, { x: home.x, z: home.z });
+  assert.equal(f.duel.getState().recruiterHealth, 100);
+  assert.equal(f.tick(PM_ATTACK_MS.punch / 2 - 25).length, 0);
+  assert.equal(f.duel.getState().phase, 'provoking');
+  const contacts = f.tick(25);
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].type, 'punch');
+  assert.equal(f.duel.getState().phase, 'falling');
+  assert.equal(f.duel.getState().elapsed, 0, 'the seated roll and tumble begin after contact rather than at button press');
+  assert.equal(f.duel.getState().recruiterHealth, 80);
+  f.tick(25);
+  assert.ok(f.duel.getState().elapsed > 0);
+  assert.ok(Math.hypot(f.duel.getState().x - home.x, f.duel.getState().z - home.z) < .04);
+});
+
+test('a missed direct kick leaves the recruiter seated, and a later connected strike can provoke them', () => {
+  const f = fixture({ initialAttack: 'kick' });
+  f.player.rotation = 0;
+  assert.equal(f.tick(PM_ATTACK_MS.kick).length, 0);
+  assert.equal(f.duel.getState().phase, 'provoking');
+  assert.equal(f.duel.getState().recruiterHealth, 100);
+  f.player.rotation = Math.PI;
+  assert.equal(f.duel.attack('punch', f.now()), true);
+  assert.equal(f.tick(PM_ATTACK_MS.punch / 2).length, 1);
+  assert.equal(f.duel.getState().phase, 'falling');
+});
+
+test('a direct encounter accepts the initial action on its shared identity and can end while still seated', () => {
+  const duel = createRecruiterDuel({ home, landing });
+  assert.equal(duel.start({ id: 'direct-owner', ownerId: 'visitor-a', startedAt: 1000, initialAttack: 'kick' }, { now: 1200 }), true);
+  assert.equal(duel.getState().phase, 'provoking');
+  assert.deepEqual(duel.getState().playerAttack, { type: 'kick', seq: 1, startedAt: 1200 });
+  duel.end();
+  assert.equal(duel.getState().phase, 'seated');
+  assert.equal(duel.getState().playerAttack, null);
+  assert.deepEqual({ x: duel.getState().x, z: duel.getState().z }, { x: home.x, z: home.z });
+});
+
+test('falling, grounded, recovering and approaching targets still resolve each player strike once', () => {
+  for (const phase of ['falling', 'grounded', 'recovering', 'approaching']) {
+    const f = fixture(), initial = { ...f.duel.getState(), phase, x: landing.x, z: landing.z, elapsed: 0,
+      slamHits: 3, slamReady: true };
+    const duel = createRecruiterDuel({ home, landing });
+    assert.equal(duel.resume(f.duel.getIdentity(), initial, f.now()), true);
+    if (phase !== 'approaching') assert.equal(duel.attack('slam', f.now(), { slamLanding: { x: landing.x + 1, z: landing.z } }), false,
+      'a grounded or recovering target must stand before a charged throw can begin');
+    assert.equal(duel.attack('kick', f.now()), true, `kicks remain available during ${phase}`);
+    let now = f.now(), impacts = [];
+    for (let frame = 0; frame < PM_ATTACK_MS.kick / 25; frame++) {
+      now += 25;
+      impacts.push(...duel.update(25, { now, player: f.player, canAdvanceFall: () => false,
+        move: from => ({ ...from, blocked: true }) }).impacts);
+    }
+    assert.equal(impacts.filter(hit => hit.actor === 'player').length, 1, `${phase} has one visible contact`);
+    assert.equal(duel.getState().recruiterHealth, 70);
+    if (phase !== 'approaching') assert.equal(duel.getState().elapsed, 0,
+      'a held pose clock does not prevent the independent player action reaching contact');
+  }
+});
+
+test('actual limb contact can reject a ground hit or authorize a measured larger body footprint', () => {
+  for (const contactAllowed of [false, true]) {
+    const f = fixture(), duel = createRecruiterDuel({ home, landing });
+    assert.equal(duel.resume(f.duel.getIdentity(), { ...f.duel.getState(), phase: 'grounded', ...landing }, f.now()), true);
+    f.player.z = landing.z + 1.05;
+    assert.equal(duel.attack('kick', f.now()), true);
+    let now = f.now(), checks = 0, impacts = [];
+    for (let frame = 0; frame < PM_ATTACK_MS.kick / 25; frame++) {
+      now += 25;
+      impacts.push(...duel.update(25, { now, player: f.player, canAdvanceFall: () => false,
+        contactRange: ({ type, phase, actorSide }) => {
+          assert.equal(type, 'kick'); assert.equal(phase, 'grounded'); assert.equal(actorSide, 'player');
+          return 1.1;
+        },
+        canPlayerContact: (type, target, player) => {
+          checks++; assert.equal(type, 'kick'); assert.equal(target.phase, 'grounded');
+          assert.equal(player.z, f.player.z); return contactAllowed;
+        } }).impacts);
+    }
+    assert.equal(checks, 1, 'geometry contact is evaluated once for the action');
+    assert.equal(impacts.length, contactAllowed ? 1 : 0);
+    assert.equal(duel.getState().recruiterHealth, contactAllowed ? 70 : 100);
+  }
+});
+
+test('three successful contacts charge a slam, which only throws after its grab connects', () => {
+  const f = fixture(); f.fight();
+  const throwTo = { x: landing.x + 1.2, z: landing.z };
+  assert.equal(f.duel.attack('slam', f.now(), { slamLanding: throwTo }), false, 'a slam cannot start before three hits');
+  for (let hit = 0; hit < 3; hit++) {
+    assert.equal(f.duel.attack('punch', f.now()), true);
+    f.tick(PM_ATTACK_MS.punch);
+    assert.equal(f.duel.getState().slamHits, hit + 1);
+    assert.equal(f.duel.getState().slamReady, hit === 2);
+  }
+  assert.equal(f.duel.attack('slam', f.now()), false, 'a physically preflighted landing is required');
+  assert.equal(f.duel.attack('slam', f.now(), { slamLanding: { x: Infinity, z: 0 } }), false);
+  assert.equal(f.duel.attack('slam', f.now(), { slamLanding: throwTo }), true);
+  const before = f.duel.getState();
+  assert.equal(before.phase, 'fighting', 'requesting a grab never starts a throw or teleports its target');
+  assert.equal(f.tick(PM_ATTACK_MS.slam / 2 - 25).filter(hit => hit.actor === 'player').length, 0);
+  assert.equal(f.duel.getState().phase, 'fighting');
+  const contacts = f.tick(25).filter(hit => hit.actor === 'player');
+  assert.equal(contacts.length, 1); assert.equal(contacts[0].type, 'slam');
+  const grabbed = f.duel.getState();
+  assert.equal(grabbed.phase, 'slamming'); assert.equal(grabbed.elapsed, 0);
+  assert.deepEqual(grabbed.slamOrigin, { x: grabbed.x, z: grabbed.z });
+  assert.deepEqual(grabbed.slamLanding, throwTo);
+  assert.equal(grabbed.slamHits, 0); assert.equal(grabbed.slamReady, false);
+  assert.equal(grabbed.slamReadyAt, f.now() + PM_SLAM_COOLDOWN_MS);
+  assert.equal(grabbed.recruiterHealth, 5);
+  f.tick(3000, { canAdvanceSlam: () => false });
+  const held = f.duel.getState();
+  assert.equal(held.elapsed, 0); assert.equal(held.x, grabbed.x); assert.equal(held.z, grabbed.z);
+  const travel = [];
+  f.tick(PM_SLAM_MS, { slamPosition: (progress, state) => {
+    travel.push(progress);
+    return { x: state.slamOrigin.x + (state.slamLanding.x - state.slamOrigin.x) * progress, z: state.slamOrigin.z };
+  } });
+  assert.ok(travel.length > 1);
+  assert.equal(f.duel.getState().phase, 'grounded');
+  assert.equal(f.duel.getState().x, throwTo.x);
+  assert.equal(f.duel.getState().hitSeq, grabbed.hitSeq, 'held or resumed throw frames cannot repeat grab contact');
+});
+
+test('a missed slam keeps its charge and never enters the throw phase', () => {
+  const f = fixture(); f.fight();
+  const ready = { ...f.duel.getState(), slamHits: 3, slamReady: true, slamReadyAt: 0 };
+  const duel = createRecruiterDuel({ home, landing });
+  assert.equal(duel.resume(f.duel.getIdentity(), ready, f.now()), true);
+  assert.equal(duel.attack('slam', f.now(), { slamLanding: { x: landing.x + 1, z: landing.z } }), true);
+  f.player.rotation = 0;
+  let now = f.now(), impacts = [];
+  for (let frame = 0; frame < PM_ATTACK_MS.slam / 25; frame++) {
+    now += 25; impacts.push(...duel.update(25, { now, player: f.player }).impacts);
+  }
+  assert.equal(impacts.filter(hit => hit.actor === 'player').length, 0);
+  assert.equal(duel.getState().phase, 'fighting');
+  assert.equal(duel.getState().slamHits, 3);
+  assert.equal(duel.getState().slamReady, true);
+  assert.equal(duel.getState().recruiterHealth, 100);
+});
+
+test('slam cooldown blocks a new charged grab until eight seconds have elapsed', () => {
+  const f = fixture(); f.fight();
+  const duel = createRecruiterDuel({ home, landing }), readyAt = f.now() + PM_SLAM_COOLDOWN_MS;
+  assert.equal(duel.resume(f.duel.getIdentity(), { ...f.duel.getState(), slamHits: 3, slamReady: false, slamReadyAt: readyAt }, f.now()), true);
+  const plan = { slamLanding: { x: landing.x + 1, z: landing.z } };
+  assert.equal(duel.attack('slam', readyAt - .001, plan), false);
+  assert.equal(duel.attack('slam', readyAt, plan), true);
+  assert.equal(duel.getState().slamReady, true);
+});
+
+test('replicated throw metadata resumes exactly and completes a supported return after owner departure', () => {
+  const f = fixture(), duel = createRecruiterDuel({ home, landing });
+  const snapshot = { ...f.duel.getState(), phase: 'slamming', elapsed: 400, x: 1.5, z: .22,
+    slamHits: 0, slamReady: false, slamReadyAt: 18_000.5,
+    slamOrigin: { x: 1.2, z: .22 }, slamLanding: { x: 2.4, z: .22 } };
+  assert.equal(duel.resume(f.duel.getIdentity(), snapshot, f.now()), true);
+  assert.deepEqual(duel.getState(), snapshot);
+  duel.end(); assert.equal(duel.getState().phase, 'slamming');
+  let now = f.now();
+  for (let frame = 0; frame < 280 && duel.getState().phase !== 'seated'; frame++) {
+    now += 25; duel.update(25, { now, player: f.player });
+  }
+  assert.equal(duel.getState().phase, 'seated');
+  assert.equal(duel.getState().outcome, 'disengaged');
+  assert.equal(duel.getState().hitSeq, snapshot.hitSeq, 'observer cleanup never replays an action');
+  for (const patch of [{ slamHits: 4 }, { slamReady: 1 }, { slamReadyAt: Infinity },
+    { slamOrigin: { x: NaN, z: 0 } }, { slamLanding: { x: 1e9, z: 0 } }]) {
+    const invalid = createRecruiterDuel({ home, landing });
+    assert.equal(invalid.resume(f.duel.getIdentity(), { ...snapshot, ...patch }, f.now()), false);
+  }
+});
+
+test('the API’s fresh provoking snapshot with nullable throw endpoints accepts its initial action', () => {
+  const duel = createRecruiterDuel({ home, landing }), startedAt = 10_000;
+  const snapshot = { ...duel.getState(), phase: 'provoking', slamReady: false, slamReadyAt: startedAt,
+    slamHits: 0, slamOrigin: null, slamLanding: null };
+  assert.equal(duel.resume({ id: 'fresh-direct', ownerId: 'visitor-a', startedAt }, snapshot, startedAt), true);
+  assert.deepEqual(duel.getState(), snapshot);
+  assert.equal(duel.attack('punch', startedAt), true);
+  const result = duel.update(300, { now: startedAt + 300, player: { x: home.x, z: home.z + .91, rotation: Math.PI } });
+  assert.equal(result.state.phase, 'falling');
+  assert.equal(result.impacts.length, 1);
 });

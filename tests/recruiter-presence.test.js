@@ -9,6 +9,7 @@ import {
 } from '../api/world.js';
 import { createPresence } from '../src/presence.js';
 import { SEAT_POSITIONS } from '../src/seat-catalog.js';
+import { createRecruiterDuel } from '../src/recruiter-combat.js';
 
 const near = () => ({ x: RECRUITER_HOME.x + .9, z: RECRUITER_HOME.z, rotation: -Math.PI / 2, hair: 5 });
 const command = (suffix, action = 'move', state = {}, extra = {}) => validateCommand({
@@ -20,6 +21,7 @@ const make = () => {
   return { world: createMemoryWorld({ now: () => time }), now: () => time, advance(ms) { time += ms; } };
 };
 const bump = (fixture, suffix = 'a', contactKind = 'chair', state = {}) => fixture.world.dispatch(command(suffix, 'recruiter-bump', state, { contactKind }));
+const attack = (fixture, suffix = 'a', type = 'punch', state = {}) => fixture.world.dispatch(command(suffix, 'recruiter-attack', state, { type }));
 async function start(fixture, suffix = 'a') {
   await fixture.world.dispatch(command(suffix, 'join'));
   await bump(fixture, suffix);
@@ -41,6 +43,78 @@ const assertPrivate = (value, suffixes = ['a', 'b']) => {
   for (const suffix of suffixes) assert.equal(JSON.stringify(value).includes(suffix.repeat(64)), false, 'credentials never appear in snapshots');
   assert.ok(value.visitors.every(visitor => !Object.hasOwn(visitor, 'token')));
 };
+
+test('one nearby punch or kick atomically starts a seated provoking encounter without bump progress', async () => {
+  for (const type of ['punch', 'kick']) {
+    const fixture = make(), result = await attack(fixture, 'a', type);
+    assert.deepEqual(result.recruiterAttack, { type, started: true });
+    assert.equal(result.recruiterEncounter.ownerId, command('a').id);
+    assert.equal(result.recruiterEncounter.initialAttack, type);
+    assert.equal(result.recruiterEncounter.combat.phase, 'provoking');
+    assert.equal(result.recruiterEncounter.combat.x, RECRUITER_HOME.x);
+    assert.equal(result.recruiterEncounter.combat.z, RECRUITER_HOME.z);
+    assert.equal(result.recruiterEncounter.combat.playerAttack, null, 'animation contact remains the duel controller’s responsibility');
+    assert.equal(result.recruiterEncounter.combat.recruiterHealth, 100);
+    const duel = createRecruiterDuel({ home: RECRUITER_HOME, landing: { x: RECRUITER_HOME.x + 1.2, z: RECRUITER_HOME.z - .23 } });
+    assert.equal(duel.resume(result.recruiterEncounter, result.recruiterEncounter.combat, fixture.now()), true,
+      'the exact API snapshot must be accepted by the actual duel controller');
+    assert.equal(duel.attack(result.recruiterEncounter.initialAttack, fixture.now()), true);
+    assert.equal(duel.getState().playerAttack.type, type);
+    assert.deepEqual(result.seats, {});
+    assert.equal(result.recruiterBump, undefined);
+    assertPrivate(result);
+  }
+});
+
+test('competing direct attacks have one owner, and forged, distant, seated or cooling-down requests cannot start a second fight', async () => {
+  const fixture = make();
+  assert.equal((await attack(fixture, 'a', 'punch', { x: RECRUITER_HOME.x + 1.71 })).recruiterAttack.reason, 'too-far');
+  await fixture.world.dispatch(command('a', 'claim', {}, { jobId: 'product-designer' }));
+  assert.equal((await attack(fixture)).recruiterAttack.reason, 'seated');
+  await fixture.world.dispatch(command('a', 'release'));
+  const results = await Promise.all(['a', 'b'].map(suffix => attack(fixture, suffix)));
+  assert.equal(results.filter(value => value.recruiterAttack.started).length, 1);
+  assert.equal(new Set(results.map(value => value.recruiterEncounter.id)).size, 1);
+  assert.equal(results.find(value => !value.recruiterAttack.started).recruiterAttack.reason, 'busy');
+  const forged = await fixture.world.dispatch({ ...command('a', 'recruiter-attack', {}, { type: 'kick' }), token: 'c'.repeat(64) });
+  assert.equal(forged.code, 403);
+  const owner = results[0].recruiterEncounter.ownerId === command('a').id ? 'a' : 'b';
+  await fixture.world.dispatch(command(owner, 'leave'));
+  assert.equal((await attack(fixture, 'c')).recruiterAttack.reason, 'cooldown');
+  fixture.advance(3100);
+  assert.equal((await attack(fixture, 'c', 'kick')).recruiterAttack.started, true);
+});
+
+test('direct initiation validates attack types and proximity positions at the HTTP command boundary', () => {
+  for (const type of ['slam', 'laser', '', null, 1]) assert.throws(() => command('a', 'recruiter-attack', {}, { type }), /Invalid/);
+  assert.throws(() => command('a', 'recruiter-attack', { z: NaN }, { type: 'punch' }), /Invalid/);
+  const fixture = command('a', 'recruiter-attack', {}, { type: 'kick' });
+  assert.equal(fixture.type, 'kick');
+  assert.equal(Object.hasOwn(fixture, 'contactKind'), false);
+});
+
+test('owner-only slam snapshots carry validated cooldowns, hit counts and bounded throw endpoints without sharing mutable objects', async () => {
+  const fixture = make(), encounter = (await attack(fixture)).recruiterEncounter;
+  const action = { type: 'slam', seq: 4, startedAt: fixture.now() + .5 };
+  const update = combat(encounter, fixture.now(), { phase: 'slamming', playerAttack: action, slamReady: false, slamReadyAt: fixture.now() + 8000,
+    slamHits: 0, slamOrigin: { x: RECRUITER_HOME.x + 1, z: RECRUITER_HOME.z }, slamLanding: { x: RECRUITER_HOME.x + 2, z: RECRUITER_HOME.z - 1 } });
+  const normalized = command('a', 'move', { recruiterCombat: update, combatAction: action });
+  const snapshot = await fixture.world.dispatch(normalized);
+  assert.deepEqual(snapshot.recruiterEncounter.combat, update);
+  assert.equal(snapshot.visitors[0].combatAction.type, 'slam');
+  snapshot.recruiterEncounter.combat.slamLanding.x = 999;
+  assert.equal((await fixture.world.dispatch()).recruiterEncounter.combat.slamLanding.x, update.slamLanding.x);
+  const hostile = await fixture.world.dispatch(command('b', 'move', { recruiterCombat: { ...update, slamHits: 3 } }));
+  assert.equal(hostile.recruiterEncounter.combat.slamHits, 0);
+  for (const patch of [{ slamReady: 1 }, { slamReadyAt: Infinity }, { slamReadyAt: -1 }, { slamHits: .5 }, { slamHits: -1 }, { slamHits: 4 },
+    { slamOrigin: { x: NaN, z: 0 } }, { slamLanding: { x: RECRUITER_HOME.x + 21, z: RECRUITER_HOME.z } }]) {
+    assert.throws(() => command('a', 'move', { recruiterCombat: { ...update, ...patch } }), /Invalid/);
+  }
+  const reset = command('a', 'move', { recruiterCombat: { ...update, phase: 'recovering', slamOrigin: null, slamLanding: null } });
+  assert.equal(Object.hasOwn(reset.state.recruiterCombat, 'slamOrigin'), false);
+  assert.equal(Object.hasOwn(reset.state.recruiterCombat, 'slamLanding'), false);
+  assertPrivate(hostile);
+});
 
 test('three deliberate contacts start only the Product Manager encounter, and the last contact must be the chair', async () => {
   const fixture = make();
@@ -250,6 +324,134 @@ test('a browser visitor can start the shared encounter and publish its combat wi
   assert.equal(after.recruiterBump.started, false);
 });
 
+test('browser direct attacks publish the initial action and shared ownership with no clicks or bump requests', async t => {
+  const fixture = browser(t); fixture.client.update(near()); await fixture.tick();
+  const started = await fixture.client.startRecruiterAttack('kick');
+  assert.equal(started.recruiterAttack.started, true);
+  assert.equal(started.recruiterEncounter.ownerId, fixture.client.id);
+  assert.equal(started.recruiterEncounter.initialAttack, 'kick');
+  assert.equal(started.recruiterEncounter.combat.phase, 'provoking');
+  assert.equal(fixture.requests.at(-1).action, 'recruiter-attack');
+  assert.equal(fixture.requests.some(value => value.action === 'recruiter-bump'), false);
+  const update = combat(started.recruiterEncounter, Date.now(), { phase: 'slamming',
+    playerAttack: { type: 'slam', seq: 4, startedAt: Date.now() }, slamReady: false, slamReadyAt: Date.now() + 8000, slamHits: 0,
+    slamOrigin: { ...RECRUITER_HOME }, slamLanding: { x: RECRUITER_HOME.x + 2, z: RECRUITER_HOME.z } });
+  fixture.client.update({ recruiterCombat: update, combatAction: update.playerAttack });
+  fixture.advance(1000); await fixture.tick();
+  assert.deepEqual(fixture.snapshots.at(-1).recruiterEncounter.combat, update);
+  fixture.client.destroy();
+  assert.equal((await fixture.client.startRecruiterAttack('punch')).recruiterAttack.reason, 'unavailable');
+});
+
+test('stationary observers poll active encounters at 125 ms and return to ordinary idle cadence after clearing', async t => {
+  const fixture = browser(t); fixture.client.update(near()); await fixture.tick();
+  const other = command('b', 'recruiter-attack', {}, { type: 'punch' });
+  await fixture.backing.dispatch(other);
+  fixture.advance(1000); await fixture.tick();
+  assert.equal(fixture.snapshots.at(-1).recruiterEncounter.ownerId, other.id);
+  let count = fixture.requests.length;
+  fixture.advance(124); await fixture.tick();
+  assert.equal(fixture.requests.length, count);
+  fixture.advance(1); await fixture.tick();
+  assert.equal(fixture.requests.length, ++count);
+  for (let frame = 0; frame < 4; frame++) {
+    fixture.advance(125); await fixture.tick();
+    assert.equal(fixture.requests.length, ++count, 'a stationary observer keeps receiving short animation poses');
+  }
+  await fixture.backing.dispatch(command('b', 'leave'));
+  fixture.advance(125); await fixture.tick();
+  assert.equal(fixture.snapshots.at(-1).recruiterEncounter, null);
+  count = fixture.requests.length;
+  fixture.advance(999); await fixture.tick();
+  assert.equal(fixture.requests.length, count);
+  fixture.advance(1); await fixture.tick();
+  assert.equal(fixture.requests.length, count + 1);
+});
+
+test('an encounter owner publishes dirty attack poses at 125 ms without changing ordinary movement throttling', async t => {
+  const fixture = browser(t); fixture.client.update(near()); await fixture.tick();
+  fixture.client.update({ x: near().x + .1 });
+  let count = fixture.requests.length;
+  fixture.advance(125); await fixture.tick();
+  assert.equal(fixture.requests.length, count, 'ordinary moving visitors retain the 250 ms cadence');
+  fixture.advance(125); await fixture.tick();
+  assert.equal(fixture.requests.length, ++count);
+  const started = await fixture.client.startRecruiterAttack('kick');
+  const update = combat(started.recruiterEncounter, Date.now());
+  fixture.client.update({ recruiterCombat: update, combatAction: update.playerAttack });
+  count = fixture.requests.length;
+  fixture.advance(125); await fixture.tick();
+  assert.equal(fixture.requests.length, count + 1);
+  assert.deepEqual(fixture.requests.at(-1).state.recruiterCombat, update);
+});
+
+test('fast encounter polling never overlaps in-flight work and respects the connection retry delay', async t => {
+  const fixture = browser(t); fixture.client.update(near()); await fixture.tick();
+  await fixture.client.startRecruiterAttack('punch');
+  let release, calls = 0;
+  fixture.setFetch(async (_url, options) => {
+    calls++;
+    await new Promise(resolve => { release = resolve; });
+    const body = JSON.parse(options.body);
+    return { ok: true, json: async () => fixture.backing.dispatch(validateCommand(body)) };
+  });
+  fixture.advance(125);
+  const pending = fixture.tick();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(calls, 1);
+  fixture.advance(125); await fixture.tick();
+  assert.equal(calls, 1, 'a slow request cannot create overlapping polls');
+  release(); await pending;
+  fixture.setFetch(async () => { calls++; return { ok: false, status: 503 }; });
+  fixture.advance(125); await fixture.tick();
+  assert.equal(calls, 2);
+  fixture.advance(4999); await fixture.tick();
+  assert.equal(calls, 2, 'the active encounter cannot bypass retry backoff');
+  fixture.advance(1); await fixture.tick();
+  assert.equal(calls, 3);
+});
+
+test('a stale shared encounter cannot keep the faster polling cadence beyond its remaining lifetime', async t => {
+  const fixture = browser(t); fixture.client.update(near()); await fixture.tick();
+  const originalServerTime = Date.now();
+  const staleEncounter = { id: 'visitor-pm-000000-b:1900000', ownerId: command('b').id,
+    startedAt: originalServerTime - 59_750, updatedAt: originalServerTime, combat: null };
+  fixture.setFetch(async () => ({ ok: true, json: async () => ({ visitors: [], seats: {}, botDefeats: {}, recruiterEncounter: staleEncounter,
+    serverTime: originalServerTime, status: 'shared' }) }));
+  fixture.advance(1000); await fixture.tick();
+  let count = fixture.requests.length;
+  fixture.advance(125); await fixture.tick();
+  // This custom fetcher does not use the fixture request list, so count snapshots.
+  const snapshots = fixture.snapshots.length;
+  fixture.advance(125); await fixture.tick();
+  assert.equal(fixture.snapshots.length, snapshots, 'the remaining 250 ms encounter lifetime ends the fast cadence');
+  assert.equal(fixture.requests.length, count);
+});
+
+test('local direct combat retains throw snapshots and rejects malformed cooldowns or attempts to bypass a known foreign lock', async t => {
+  const fixture = browser(t, { response: () => ({ ok: false, status: 503 }) });
+  fixture.client.update(near()); await fixture.tick();
+  const start = await fixture.client.startRecruiterAttack('punch');
+  assert.equal(start.recruiterAttack.started, true);
+  assert.equal(start.status, 'local');
+  assert.equal(start.recruiterEncounter.combat.phase, 'provoking');
+  const duel = createRecruiterDuel({ home: RECRUITER_HOME, landing: { x: RECRUITER_HOME.x + 1.2, z: RECRUITER_HOME.z - .23 } });
+  assert.equal(duel.resume(start.recruiterEncounter, start.recruiterEncounter.combat, Date.now()), true,
+    'the exact local fallback snapshot must be accepted by the actual duel controller');
+  assert.equal(duel.attack(start.recruiterEncounter.initialAttack, Date.now()), true);
+  assert.equal((await fixture.client.startRecruiterAttack('slam')).recruiterAttack.reason, 'invalid-attack');
+  const update = combat(start.recruiterEncounter, Date.now(), { phase: 'slamming', playerAttack: { type: 'slam', seq: 4, startedAt: Date.now() + .5 },
+    slamReady: false, slamReadyAt: Date.now() + 8000, slamHits: 0, slamOrigin: { ...RECRUITER_HOME }, slamLanding: { x: RECRUITER_HOME.x + 2, z: RECRUITER_HOME.z } });
+  fixture.client.update({ recruiterCombat: update });
+  const snapshot = await fixture.client.startRecruiterAttack('kick');
+  assert.equal(snapshot.recruiterAttack.reason, 'busy');
+  assert.deepEqual(snapshot.recruiterEncounter.combat, update);
+  snapshot.recruiterEncounter.combat.slamLanding.x = 999;
+  assert.deepEqual((await fixture.client.startRecruiterAttack('kick')).recruiterEncounter.combat, update);
+  fixture.client.update({ recruiterCombat: { ...update, slamReadyAt: Infinity, slamLanding: { x: 999, z: 0 } } });
+  assert.deepEqual((await fixture.client.startRecruiterAttack('kick')).recruiterEncounter.combat, update);
+});
+
 test('an unconfigured preview supports deliberate bumps locally, including the last-chair condition', async t => {
   const fixture = browser(t, { response: () => ({ ok: false, status: 503 }) });
   fixture.client.update(near()); await fixture.tick();
@@ -279,6 +481,10 @@ test('a lost connection cannot turn a known foreign live owner into a local figh
   const blocked = await fixture.client.bumpRecruiter('chair');
   assert.equal(blocked.recruiterBump.started, false);
   assert.equal(blocked.recruiterEncounter.ownerId, other.id, 'the last known shared lock survives the local fallback');
+  const direct = await fixture.client.startRecruiterAttack('kick');
+  assert.equal(direct.recruiterAttack.started, false);
+  assert.equal(direct.recruiterAttack.reason, 'busy');
+  assert.equal(direct.recruiterEncounter.ownerId, other.id);
 });
 
 // Optional real-Lua contract checks use only the dedicated, disposable local
@@ -286,7 +492,7 @@ test('a lost connection cannot turn a known foreign live owner into a local figh
 const redisSocket = process.env.RECRUITER_REDIS_TEST_SOCKET;
 const redisCase = (name, callback) => test(name, { skip: !redisSocket }, callback);
 function realRedis(initialTime = 3_000_000) {
-  assert.equal(redisSocket, '/tmp/common-ground-v52-redis.sock', 'only the isolated test database may be flushed');
+  assert.ok(['/tmp/common-ground-v52-redis.sock', '/tmp/common-ground-v54-redis.sock'].includes(redisSocket), 'only the isolated test database may be flushed');
   const cli = '/workspace/hiring-world/.tools/redis-test/root/usr/bin/redis-cli';
   const libraryPath = '/workspace/hiring-world/.tools/redis-test/root/usr/lib/x86_64-linux-gnu';
   const env = { ...process.env, LD_LIBRARY_PATH: libraryPath + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '') };
@@ -304,6 +510,50 @@ function realRedis(initialTime = 3_000_000) {
   });
   return fixture;
 }
+
+redisCase('actual Redis Lua matches memory direct ownership, initial seated pose, cooldown and slam relay', async () => {
+  const fixture = realRedis(), memory = createMemoryWorld({ now: fixture.now });
+  const compare = async value => {
+    const expected = await memory.dispatch(value), actual = await fixture.world.dispatch(value);
+    assert.deepEqual(actual.recruiterAttack, expected.recruiterAttack);
+    assert.deepEqual(actual.recruiterEncounter, expected.recruiterEncounter);
+    assert.equal(actual.visitors.length, expected.visitors.length);
+    for (const visitor of actual.visitors) {
+      const wanted = expected.visitors.find(value => value.id === visitor.id);
+      assert.ok(wanted);
+      assert.ok(Math.abs(visitor.rotation - wanted.rotation) < 1e-12, 'Redis CJSON retains rotation within its decimal precision');
+      assert.deepEqual({ ...visitor, rotation: 0 }, { ...wanted, rotation: 0 });
+    }
+    assert.deepEqual(actual.seats, expected.seats);
+    assertPrivate(actual);
+    return actual;
+  };
+  await compare(command('a', 'join'));
+  assert.equal((await compare(command('a', 'recruiter-attack', { x: RECRUITER_HOME.x + 2 }, { type: 'punch' }))).recruiterAttack.reason, 'too-far');
+  const started = await compare(command('a', 'recruiter-attack', {}, { type: 'kick' }));
+  assert.equal(started.recruiterEncounter.initialAttack, 'kick');
+  assert.equal(started.recruiterEncounter.combat.phase, 'provoking');
+  const busy = await compare(command('b', 'recruiter-attack', {}, { type: 'punch' }));
+  assert.equal(busy.recruiterAttack.reason, 'busy');
+  const update = combat(started.recruiterEncounter, fixture.now(), { phase: 'slamming',
+    playerAttack: { type: 'slam', seq: 4, startedAt: fixture.now() }, slamReady: false, slamReadyAt: fixture.now() + 8000, slamHits: 0,
+    slamOrigin: { ...RECRUITER_HOME }, slamLanding: { x: RECRUITER_HOME.x + 2, z: RECRUITER_HOME.z } });
+  await compare(command('a', 'move', { recruiterCombat: update, combatAction: update.playerAttack }));
+  await compare(command('b', 'move', { recruiterCombat: { ...update, slamHits: 3 }, combatAction: update.playerAttack }));
+  await compare(command('a', 'leave'));
+  assert.equal((await compare(command('b', 'recruiter-attack', {}, { type: 'punch' }))).recruiterAttack.reason, 'cooldown');
+  fixture.advance(3100);
+  assert.equal((await compare(command('b', 'recruiter-attack', {}, { type: 'punch' }))).recruiterAttack.started, true);
+});
+
+redisCase('actual Redis Lua permits one winner when candidates start direct attacks together', async () => {
+  const fixture = realRedis();
+  const results = await Promise.all(['a', 'b'].map(suffix => attack(fixture, suffix)));
+  assert.equal(results.filter(value => value.recruiterAttack.started).length, 1);
+  assert.equal(new Set(results.map(value => value.recruiterEncounter.id)).size, 1);
+  assert.equal(results.find(value => !value.recruiterAttack.started).recruiterAttack.reason, 'busy');
+  assertPrivate(await fixture.world.dispatch());
+});
 
 redisCase('actual Redis Lua matches memory bump progress, cooldowns and the final-chair rule', async () => {
   const fixture = realRedis(), memory = createMemoryWorld({ now: fixture.now });

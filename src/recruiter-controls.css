@@ -8,10 +8,14 @@
 .recruiter-controls-status{margin:0;color:#626958;font-size:11px;line-height:1.5}
 .recruiter-controls-health{margin:9px 0 0;color:#626958;font-size:10px;font-weight:600;letter-spacing:.2px}
 .recruiter-controls-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
-.recruiter-controls-actions[hidden],.recruiter-controls-health[hidden],.recruiter-controls-hint[hidden]{display:none!important}
+.recruiter-controls-actions[hidden],.recruiter-controls-health[hidden],.recruiter-controls-hint[hidden],.recruiter-controls-special[hidden]{display:none!important}
 .recruiter-controls-attack,.recruiter-controls-leave{min-height:37px;padding:8px 13px;border:1px solid #34392c;border-radius:9px;font:600 11px/1.3 var(--body,sans-serif);white-space:nowrap;cursor:pointer}
 .recruiter-controls-attack{background:var(--yellow,#f4d85b);color:#24251f;box-shadow:0 2px 0 #252820}
 .recruiter-controls-attack:hover{background:#f9e386}
+.recruiter-controls-slam{background:#e1dcee}
+.recruiter-controls-slam:hover{background:#ebe5f5}
+.recruiter-controls-special{margin:9px 0 0;color:#7b8072;font-size:10px;line-height:1.45}
+.recruiter-controls-special[data-ready="true"]{color:#536345;font-weight:650}
 .recruiter-controls-leave{margin-left:auto;background:#f3f0e7;color:#4c5244;box-shadow:0 1px 0 #25282020}
 .recruiter-controls-leave:hover{background:#eae7dd}
 .recruiter-controls-attack:disabled,.recruiter-controls-leave:disabled{opacity:.48;box-shadow:none;cursor:default}

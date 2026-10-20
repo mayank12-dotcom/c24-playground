@@ -52,7 +52,7 @@ class EventTarget {
   fire(name, event = {}) { return (this.listeners.get(name) || []).map(listener => listener(event)); }
 }
 
-function setup({ claimSeat = async () => true, bumpRecruiter = async () => ({ recruiterBump: { hits: 1, required: 3, started: false }, recruiterEncounter: null }), deferSeatReady = false, deferStandUp = false, releaseSeat = async () => {}, nearBot = false, canPush = true, soundStorage = new Map(), desktop = true, visitorName = 'Alex' } = {}) {
+function setup({ claimSeat = async () => true, startRecruiterAttack = async () => ({ recruiterAttack: { started: false }, recruiterEncounter: null }), deferSeatReady = false, deferStandUp = false, releaseSeat = async () => {}, nearBot = false, canPush = true, soundStorage = new Map(), desktop = true, visitorName = 'Alex' } = {}) {
   const calls = [];
   const nodes = new Map();
   const document = new EventTarget();
@@ -268,7 +268,7 @@ function setup({ claimSeat = async () => true, bumpRecruiter = async () => ({ re
         id: `visitor-test-${fixture.presences.length}`, calls: ownCalls, config,
         claimSeat: async id => { ownCalls.push(['claimSeat', id]); return claimSeat(id, instance); },
         challengeBot: async id => { calls.push(['challengeBot', id]); return { jobId: id, hits: 1, required: 1, won: true }; },
-        bumpRecruiter: async contactKind => { ownCalls.push(['bumpRecruiter', contactKind]); return bumpRecruiter(contactKind, instance); },
+        startRecruiterAttack: async type => { ownCalls.push(['startRecruiterAttack', type]); return startRecruiterAttack(type, instance); },
         releaseSeat: async () => { calls.push(['releaseSeat']); ownCalls.push(['releaseSeat']); await releaseSeat(instance); },
         update(state) { ownCalls.push(['update', state]); }, destroy() { ownCalls.push(['destroyPresence']); },
       };
@@ -1081,22 +1081,22 @@ test('destroying a pending rise allows a fresh world to claim and ignores old co
   assert.equal(ui.node('seated-nudge').hidden, true);
 });
 
-test('a recruiter-chair bump publishes the current position before requesting and applying shared encounter ownership', async () => {
-  const encounter = { id: 'encounter-1', ownerId: 'visitor-test-0', startedAt: 1800000000000, updatedAt: 1800000000000, combat: null };
-  const response = { recruiterBump: { hits: 3, required: 3, started: true }, recruiterEncounter: encounter };
-  const ui = setup({ bumpRecruiter: async () => response });
+test('a nearby first punch publishes the current position before requesting and applying shared encounter ownership', async () => {
+  const encounter = { id: 'encounter-1', ownerId: 'visitor-test-0', startedAt: 1800000000000, updatedAt: 1800000000000, initialAttack: 'punch', combat: { phase: 'provoking' } };
+  const response = { recruiterAttack: { started: true }, recruiterEncounter: encounter };
+  const ui = setup({ startRecruiterAttack: async () => response });
   const presence = ui.fixture.presences[0];
   ui.fixture.state.x = 12;
   ui.fixture.state.z = -22;
   presence.calls.length = 0;
   ui.world.calls.length = 0;
 
-  const result = await ui.world.config.onRecruiterBump({ contactKind: 'chair' });
-  assert.equal(result, response, 'the world receives its authoritative bump result');
-  assert.deepEqual(presence.calls.map(([type]) => type), ['update', 'bumpRecruiter']);
+  const result = await ui.world.config.onRecruiterAttack({ type: 'punch' });
+  assert.equal(result, response, 'the world receives its authoritative first-attack result');
+  assert.deepEqual(presence.calls.map(([type]) => type), ['update', 'startRecruiterAttack']);
   assert.equal(presence.calls[0][1].x, 12);
   assert.equal(presence.calls[0][1].z, -22);
-  assert.equal(presence.calls[1][1], 'chair', 'the server can distinguish the final chair bump from a body contact');
+  assert.equal(presence.calls[1][1], 'punch', 'the authoritative encounter starts with the requested attack animation');
   const applied = ui.world.calls.filter(([type]) => type === 'setRecruiterEncounter');
   assert.equal(applied.length, 1);
   assert.equal(applied[0][1], encounter);
@@ -1104,6 +1104,56 @@ test('a recruiter-chair bump publishes the current position before requesting an
   assert.equal(ui.calls.some(([type]) => ['sitAt', 'goToJob', 'releaseSeat'].includes(type)), false,
     'the special recruiter fight does not claim or transfer an application chair');
 });
+
+test('a first kick respects another visitor owning the recruiter without claiming a job seat', async () => {
+  const encounter = { id: 'encounter-owned', ownerId: 'another-visitor', initialAttack: 'punch', combat: { phase: 'grounded' } };
+  const response = { recruiterAttack: { started: false, reason: 'busy' }, recruiterEncounter: encounter };
+  const ui = setup({ startRecruiterAttack: async () => response });
+  ui.node('seats-toggle').fire('click');
+  const presence = ui.fixture.presences[0];
+  presence.calls.length = 0;
+  ui.world.calls.length = 0;
+  assert.equal(await ui.world.config.onRecruiterAttack({ type: 'kick' }), response);
+  assert.deepEqual(presence.calls.map(([type]) => type), ['update', 'startRecruiterAttack']);
+  assert.equal(presence.calls[1][1], 'kick');
+  assert.equal(ui.world.calls.find(([type]) => type === 'setRecruiterEncounter')[1], encounter,
+    'the authoritative foreign owner is preserved rather than locally starting another fight');
+  assert.equal(ui.node('opportunity-panel').hidden, false, 'a denied attack does not hide the current browsing flow');
+  assert.equal(ui.calls.some(([type]) => ['sitAt', 'goToJob', 'releaseSeat'].includes(type)), false);
+});
+
+test('a nearby instruction hint preserves a pending application chair claim', async () => {
+  let finishClaim;
+  const ui = setup({ claimSeat: () => new Promise(resolve => { finishClaim = resolve; }) });
+  ui.world.config.onSeatRequest(ui.jobs[0]);
+  await flush();
+  assert.equal(typeof finishClaim, 'function');
+  ui.world.config.onRecruiterFightChange({ stage: 'nearby', localPlayer: true, slamReady: false });
+  finishClaim(true);
+  await flush();
+  assert.equal(ui.world.getPlayerState().seatedJobId, ui.jobs[0].id,
+    'walking past the PM chair cannot cancel an otherwise valid application');
+  assert.equal(ui.fixture.presences[0].calls.some(([type]) => type === 'releaseSeat'), false);
+});
+
+for (const stage of ['provoking', 'slamming']) {
+  test(`the local ${stage} phase invalidates an in-flight application claim before it can seat the player`, async () => {
+    let finishClaim;
+    const ui = setup({ claimSeat: () => new Promise(resolve => { finishClaim = resolve; }) });
+    ui.world.config.onSeatRequest(ui.jobs[0]);
+    await flush();
+    assert.equal(typeof finishClaim, 'function');
+    ui.node('seats-toggle').fire('click');
+    ui.world.config.onRecruiterFightChange({ stage, localPlayer: true, playerHealth: 100, recruiterHealth: 80 });
+    assert.equal(ui.node('opportunity-panel').hidden, true);
+    finishClaim(true);
+    await flush();
+    assert.equal(ui.world.getPlayerState().seatedJobId, null,
+      'an application claim completed during combat must not put the attacker on another chair');
+    assert.equal(ui.fixture.presences[0].calls.filter(([type]) => type === 'releaseSeat').length, 1,
+      'the unused authoritative chair claim is released');
+  });
+}
 
 test('shared recruiter snapshots reach the current world with local visitor identity and clear on release', () => {
   const ui = setup();
@@ -1140,13 +1190,13 @@ test('combat movement updates preserve encounter and strike fields for shared pr
     'an old controller cannot overwrite the new visitor with stale strikes');
 });
 
-test('a bump response and combat notification from a destroyed world cannot restart the fight after a desktop restart', async () => {
-  let finishBump;
-  const ui = setup({ bumpRecruiter: () => new Promise(resolve => { finishBump = resolve; }) });
+test('a first-attack response and combat notification from a destroyed world cannot restart the fight after a desktop restart', async () => {
+  let finishAttack;
+  const ui = setup({ startRecruiterAttack: () => new Promise(resolve => { finishAttack = resolve; }) });
   const oldWorld = ui.fixture.world, oldPresence = ui.fixture.presences[0];
-  const pending = oldWorld.config.onRecruiterBump({ contactKind: 'chair' });
+  const pending = oldWorld.config.onRecruiterAttack({ type: 'kick' });
   await flush();
-  assert.equal(typeof finishBump, 'function');
+  assert.equal(typeof finishAttack, 'function');
   ui.viewport.matches = false; ui.viewport.fire('change');
   ui.viewport.matches = true; ui.viewport.fire('change');
   const currentWorld = ui.fixture.world, currentPresence = ui.fixture.presences[1];
@@ -1155,13 +1205,13 @@ test('a bump response and combat notification from a destroyed world cannot rest
   currentPresence.calls.length = 0;
   controls.calls.length = 0;
 
-  oldWorld.config.onRecruiterFightChange({ stage: 'fighting', localPlayer: true, hits: 3, required: 3 });
-  finishBump({ recruiterBump: { hits: 3, required: 3, started: true }, recruiterEncounter: { id: 'obsolete-encounter', ownerId: oldPresence.id } });
+  oldWorld.config.onRecruiterFightChange({ stage: 'provoking', localPlayer: true });
+  finishAttack({ recruiterAttack: { started: true }, recruiterEncounter: { id: 'obsolete-encounter', ownerId: oldPresence.id } });
   await pending;
-  await oldWorld.config.onRecruiterBump({ contactKind: 'recruiter' });
+  await oldWorld.config.onRecruiterAttack({ type: 'punch' });
   assert.equal(currentWorld.calls.some(([type]) => type === 'setRecruiterEncounter'), false,
     'the resolved old request cannot give the fresh world an obsolete owner');
-  assert.equal(currentPresence.calls.some(([type]) => type === 'bumpRecruiter' || type === 'update'), false);
+  assert.equal(currentPresence.calls.some(([type]) => type === 'startRecruiterAttack' || type === 'update'), false);
   assert.equal(controls.calls.some(([type]) => type === 'update'), false, 'late callbacks cannot reopen the controls');
   assert.equal(ui.node('opportunity-panel').hidden, true);
 });
@@ -1180,8 +1230,9 @@ test('recruiter control actions target the active world while toast dismissal on
 
   controls.config.onAttack('punch');
   controls.config.onAttack('kick');
+  controls.config.onAttack('slam');
   assert.deepEqual(world.calls.filter(([type]) => type === 'attackRecruiter'), [
-    ['attackRecruiter', 'punch'], ['attackRecruiter', 'kick'],
+    ['attackRecruiter', 'punch'], ['attackRecruiter', 'kick'], ['attackRecruiter', 'slam'],
   ]);
   const gesture = { type: 'click', isTrusted: true };
   controls.config.onDismiss(gesture);
@@ -1199,14 +1250,14 @@ test('recruiter control actions target the active world while toast dismissal on
     'teardown detaches controls from the stopped world');
 });
 
-test('early bump progress and another visitor fighting preserve an independently opened opportunities window', () => {
+test('a nearby combat hint and another visitor fighting preserve an independently opened opportunities window', () => {
   const ui = setup();
   ui.node('seats-toggle').fire('click');
   assert.equal(ui.node('opportunity-panel').hidden, false);
-  const progress = { stage: 'progress', hits: 1, required: 3, localPlayer: true };
+  const progress = { stage: 'nearby', localPlayer: true, slamReady: false };
   ui.world.config.onRecruiterFightChange(progress);
   assert.equal(ui.fixture.recruiterControls.state, progress);
-  assert.equal(ui.node('opportunity-panel').hidden, false, 'one bump is not the completed trigger');
+  assert.equal(ui.node('opportunity-panel').hidden, false, 'walking near the chair does not interrupt browsing');
   const observer = { stage: 'fighting', hits: 3, required: 3, localPlayer: false };
   ui.world.config.onRecruiterFightChange(observer);
   assert.equal(ui.fixture.recruiterControls.state, observer);

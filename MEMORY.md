@@ -1,6 +1,40 @@
-# Common Ground — version 53 handoff
+# Common Ground — version 54 handoff
 
-Latest startup fix, 20 October 2026 (Asia/Kolkata): version 53 removes the external Google
+Latest interaction update, 20 October 2026 (Asia/Calcutta): version 54 replaces
+the three-bump Product Manager trigger with nearby direct attacks. Walk near the
+recruiter chair and press J/punch or K/kick; no click or bump sequence is needed.
+The actual landed strike starts the existing collision-checked chair slide and
+fall. Attacks remain available during falling, grounded, recovering, approach
+and ordinary combat. After three landed ordinary hits, L offers a choke slam
+against a close standing opponent; a successful slam starts an eight-second
+cooldown. Clearance checks keep furniture and other characters solid. The bottom
+controls show attack/readiness state. Esc disengages; X hides the controls while
+keeping keyboard combat available.
+
+The new presence mutation is `startRecruiterAttack(type)` and the API action is
+`recruiter-attack`, accepting a first punch or kick. An atomic claim creates a
+single owner with `initialAttack` and a seated `provoking` phase; its strike must
+land before the recruiter falls. New combat phases include `provoking` and
+`slamming`, with serializable slam readiness, cooldown, combo and trajectory
+fields. Matching owner/encounter validation remains in memory, Redis Lua and
+local fallback. The earlier bump API is legacy compatibility, not the current
+frontend trigger. Original navigation, white outlined character design, all
+ambient bots, self-hosted fonts and shared sound controls are preserved.
+
+Shared encounters temporarily use 125 ms presence updates for both the owner
+and stationary observers; ordinary movement remains 250 ms and idle polling
+1000 ms. The faster interval ends when the encounter clears or its original
+lifetime expires. Grounded strikes check actual mitten/toe skin contact. The
+slam preflight and each physical step keep bodies and props solid; only the
+gripping hand/forearm surface may touch its encounter owner during the grab.
+Remote owners receive the same crouched punch and held-grip gestures.
+
+Current version 54 test/build/browser/publication evidence belongs in the latest
+section of `design-qa.md`. Do not reuse version 52 or 53 totals as proof of this
+new encounter. That section records the final source, execution scope and
+publication state; it is the authority for this release.
+
+Historical startup fix, 20 October 2026 (Asia/Kolkata): version 53 removes the external Google
 Fonts CSS dependency. A real Chromium run reproduced the user's blank/non-running
 page when the Google Fonts @import failed: Vite's CSS preload aborted before the
 main world module started. Previous successful source tests, production builds
@@ -16,8 +50,8 @@ it does not strip font imports with a regex or depend on Google Fonts at runtime
 The version 52 encounter, scene, character mesh/motion, original UI rules, audio,
 seat coordinates and API source are unchanged by this fix.
 
-The standalone checks pass 7/7 for this font/export change. Current bounded
-actual-Chromium verification uses the production `dist/` and a local memory API,
+The version 53 standalone checks passed 7/7 for this font/export change. Its
+bounded actual-Chromium verification used production `dist/` and a local memory API,
 with external requests blocked. Five checks pass: name/cache and actual world
 startup, local font delivery, W-key movement through the real API, original
 help/sidebar/sound controls and the 1279px no-canvas notice. The real scene was
@@ -30,7 +64,8 @@ completed successfully. This deployment status is separate from browser and
 production Redis verification. A later documentation/test-only commit may
 follow without changing the production runtime.
 
-Previous runtime update, 20 October 2026 (UTC): version 52 adds a deliberate
+Historical runtime update, superseded by version 54's direct-attack trigger:
+20 October 2026 (UTC), version 52 added a deliberate
 three-bump encounter with the recruiter behind the Product Manager desk. Any
 real visitor can be the challenger. Distinct contacts with the recruiter/chair
 count, with the last contact required to hit the chair. Holding into the chair
@@ -138,7 +173,7 @@ Snapshot date: 20 October 2026 (UTC). This file records project context for cont
 
 ## What to resume
 
-The current prototype is **version 53**. Its browser startup/font fix is described above; version 52 supplies the recruiter encounter and version 51 remains the character baseline.
+The current prototype is **version 54**. Its direct-attack Product Manager encounter is described above. Version 53 supplies the self-hosted-font startup repair; version 52's three-bump trigger is superseded. Version 51 remains the character baseline.
 The latest multiplayer configuration state remains the version 50 state below. The user clarified that real candidates
 on separate computers must see one another. The existing visitor API, Redis
 store and remote-character renderer already implement that shared presence.
@@ -222,10 +257,10 @@ The current project homepage is https://c24-playground.vercel.app/. Historical U
 
 ## Files in the portable ZIP
 
-The version 53 release targets are `/workspace/common-ground-v53.html`,
-`/workspace/common-ground-v53.zip`, `/workspace/common-ground-v53-MEMORY.md`, and
-the lean `/workspace/common-ground-v53-vercel.zip`. The full portable ZIP extracts
-to `common-ground-v53/`; the Vercel ZIP contains the project files at its root.
+The version 54 release targets are `/workspace/common-ground-v54.html`,
+`/workspace/common-ground-v54.zip`, `/workspace/common-ground-v54-MEMORY.md`, and
+the lean `/workspace/common-ground-v54-vercel.zip`. The full portable ZIP extracts
+to `common-ground-v54/`; the Vercel ZIP contains the project files at its root.
 Current export integrity is checked against the included SHA256 manifest.
 The full portable project root contains:
 
@@ -236,11 +271,11 @@ The full portable project root contains:
 - Build output and dependencies are omitted; run `npm ci` and `npm run build` after extraction. A static `dist/` alone does not execute `api/world.js`.
 - `README.md`: detailed current functionality and source map.
 - `DEPLOYMENT.md`: Vercel and Redis setup; its environment-specific access notes describe the original workspace, not necessarily the next device.
-- `design-qa.md`: chronological evidence and previous iterations. The version 53 startup section and this file describe the latest change; the version 52 recruiter section remains the encounter baseline; the version 51 character section, the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
+- `design-qa.md`: chronological evidence and previous iterations. The version 54 direct-combat section and this file describe the latest interaction; version 53 retains the startup repair evidence and version 52 records the superseded bump trigger; the version 51 character section, the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
 - `artifacts/office-v48-preview.png`: an offline still study exported from the actual world, including all nine real desk/recruiter scenes. It verifies geometry and material colors with an inspection renderer; it is not a browser screenshot or a runtime lighting match. Regenerate with `node scripts/preview-office.mjs` and the existing Blender render helper. Its 114 MB intermediate JSON is intentionally omitted.
 - `artifacts/furniture-seating-v42-preview.png` and its report: eight offline actual-mesh furniture/occupant views. Regenerate them with `scripts/preview-furniture-seats.mjs` and `scripts/render-characters.py`; the large raw export and render caches are omitted.
 - `artifacts/`: the current character reference render/report, historical shoulder comparison and character baseline, relevant room/color renders, and `footstep-sampling-report.json`, `dismiss-sampling-report.json`, `click-sampling-report.json`, and `fight-sampling-report.json`. Historical generated previews and render caches are omitted from this portable ZIP.
-- `verification/`: current version 53 startup/font/export evidence and source fingerprints when packaged, with earlier recruiter/character reports kept as historical evidence. Do not treat previous totals as a current full-suite rerun.
+- `verification/`: current version 54 encounter/build/browser evidence and source fingerprints when packaged, with earlier startup/recruiter/character reports kept as historical evidence. Do not treat previous totals as a current full-suite rerun.
 - `PACKAGE-CONTENTS.md` and `SHA256SUMS`: export scope and integrity information.
 
 Dependencies, credentials, browser state, and machine-specific tool state are excluded. Original reference images were supplied in the chat; the user's `/Users/mynk/...` paths are not files on a new device. Runtime characters and scenery are procedural and do not require those images to run.

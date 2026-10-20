@@ -64,6 +64,23 @@ Vercel API functions.
 
 ## Current deployment status
 
+Version 54 is the current source release target, `common-ground-v54-vercel.zip`.
+It changes only the Product Manager encounter flow and its supporting controls,
+poses and shared packets: walk near the chair and press J/punch or K/kick to
+knock the recruiter off on a landed strike, continue while they are down or
+recovering, and use L/choke slam after three landed ordinary hits when ready.
+A successful slam starts an eight-second cooldown. There is no click or
+three-bump prerequisite. The original navigation, self-hosted fonts, white
+outlined characters, ambient bots and sound controls remain.
+
+Use the version 54 evidence section of `design-qa.md` for the exact current build,
+browser and GitHub/Vercel results. The version 53 successes below are historical;
+they do not confirm the version 54 publication or behavior. Deploy the complete
+frontend and API together so the new direct-attack action and shared animation
+fields use the same release.
+
+Historical deployment/startup evidence follows.
+
 The public GitHub repository is
 https://github.com/mayank12-dotcom/c24-playground, branch `main`, connected to
 Vercel at https://c24-playground.vercel.app/. Before the current fix, version 52
@@ -77,7 +94,8 @@ Version 53 serves the original DM Sans and Space Grotesk families from four
 local WOFF2 assets under `public/fonts/`, with their licenses. Its standalone
 HTML embeds those font bytes along with all ten sounds. The remaining UI rules,
 gameplay and shared API are unchanged. The release target is
-`common-ground-v53-vercel.zip`, containing complete deployable source and fonts.
+`common-ground-v53-vercel.zip` for that historical font-fix release, containing
+complete deployable source and fonts.
 The font fix commit `b1bb3c137f13a5008136e66c500ed4b0dd38b75d` has a
 successful Vercel GitHub status: "Deployment has completed." Dashboard:
 https://vercel.com/mayank12-4351/c24-playground/9Lez4YJZteYmppQbwCskGnCd7Tv8.

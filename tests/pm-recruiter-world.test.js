@@ -29,7 +29,9 @@ const bundled = await build({
           .replace('const playerPosition = new THREE.Vector3(0, 0, 4.8);','const playerPosition = new THREE.Vector3(globalThis.fixture.spawn?.x??0,0,globalThis.fixture.spawn?.z??4.8);')
           .replace(marker,`globalThis.fixture.physicalBounds=furnitureBounds;${marker}if(globalThis.fixture.chooseSpawn){const spawn=globalThis.fixture.chooseSpawn(furnitureBounds);playerPosition.set(spawn.x,0,spawn.z);target.copy(playerPosition);}`)
           .replace(actors,`${actors}globalThis.fixture.crowdActors=botCharacters;`)
-          .replace('const pmBumpGate=createRecruiterBumpGate();', 'globalThis.fixture.face=yaw=>{angle=yaw;player.rotation.y=yaw;follow.reset({position:player.position,yaw});};globalThis.fixture.pmDebug=()=>({encounter:pmEncounter,combat:pmCombat,home:pmHome,chairOffset:pmChairOffset,landing:pmLanding,recruiter:pmStation?.recruiter,solids:pmStaticSolids(),chairSolids:pmChairSolids,entry:pmReturnEntry?.controller.state});const pmBumpGate=createRecruiterBumpGate();')
+          .replace('const pmChairStartZ=pmChairRaw?.z??0;', 'globalThis.fixture.face=yaw=>{angle=yaw;player.rotation.y=yaw;follow.reset({position:player.position,yaw});};globalThis.fixture.place=(point,yaw)=>{if(routeBounds.some(b=>Math.abs(point.x-b.x)<b.halfX&&Math.abs(point.z-b.z)<b.halfZ)||getCharacterObstacles().some(b=>Math.hypot(point.x-b.x,point.z-b.z)<.4+b.radius))return false;playerPosition.set(point.x,0,point.z);player.position.copy(playerPosition);target.copy(playerPosition);globalThis.fixture.face(yaw);return true;};globalThis.fixture.pmDebug=()=>({encounter:pmEncounter,combat:pmCombat,home:pmHome,chairOffset:pmChairOffset,landing:pmLanding,visitors:[...visitors.values()],recruiter:pmStation?.recruiter,player,solids:pmStaticSolids(),chairSolids:pmChairSolids,entry:pmReturnEntry?.controller.state});const pmChairStartZ=pmChairRaw?.z??0;')
+          .replace('pmPoint.z<box.max.z-.004)return false;', 'pmPoint.z<box.max.z-.004){globalThis.fixture.pmCollision={phase:state.phase,elapsed:state.elapsed,point:pmPoint.toArray(),box:{min:box.min.toArray(),max:box.max.toArray()}};return false;}')
+          .replace('(body.radius??CHARACTER_RADIUS)-.035))return false;', '(body.radius??CHARACTER_RADIUS)-.035)){globalThis.fixture.pmCollision={phase:state.phase,elapsed:state.elapsed,point:pmPoint.toArray(),body:{...body},indices:Array.from(mesh.geometry.attributes.skinIndex.array.slice(index*4,index*4+4)),weights:Array.from(mesh.geometry.attributes.skinWeight.array.slice(index*4,index*4+4))};return false;}')
           .replace(fight,`${fight}Object.defineProperty(globalThis.fixture,'fightState',{get:()=>({clock:fightClockMs,paused:fightPaused})});`)};
     });
     plugin.onResolve({ filter: /^three$/ }, () => ({ path: 'three-fixture', namespace: 'fixture' }));
@@ -112,44 +114,52 @@ function setup(t, { spawn = null, chooseSpawn = null, bots = [], botGenerator = 
 const pmIndex=allJobs.findIndex(job=>job.id==='product-manager');
 const pmHome={x:STATION_POSITIONS[pmIndex][0],z:STATION_POSITIONS[pmIndex][1]-1.12};
 
-test('three distinct chair bumps start only the PM encounter, with solid fall, fight contacts and a complete seated return',async t=>{
-  let hits=0;const states=[],reports=[],audio=[];
-  let ui;ui=setup(t,{jobs:allJobs.slice(0,4),spawn:{x:pmHome.x+.65,z:pmHome.z-1.3},extraCallbacks:{
-    onRecruiterBump:async({contactKind})=>{hits++;assert.equal(contactKind,'chair');return {recruiterBump:{hits,required:3,started:hits===3},recruiterEncounter:hits===3?{id:'physical-pm-duel',ownerId:'test-owner',startedAt:1800000000000+ui.clock,updatedAt:1800000000000+ui.clock,combat:null}:null};},
+test('direct PM attacks connect while seated and grounded, then a solid slam and return complete',async t=>{
+  const states=[],reports=[],audio=[];let starts=0,bumps=0;let ui;
+  ui=setup(t,{jobs:allJobs.slice(0,4),spawn:{x:pmHome.x+.91,z:pmHome.z-.10},extraCallbacks:{
+    onRecruiterBump:()=>bumps++,
+    onRecruiterAttack:async({type})=>{starts++;const now=1800000000000+ui.clock;return {recruiterEncounter:{id:'direct-physical-pm',ownerId:'test-owner',startedAt:now,updatedAt:now,initialAttack:type,combat:{phase:'provoking',elapsed:0,x:pmHome.x,z:pmHome.z,rotation:0,playerHealth:100,recruiterHealth:100,playerAttack:null,recruiterAttack:null,hitSeq:0,outcome:null,chairOffset:0,sitProgress:null,slamReady:false,slamReadyAt:0,slamHits:0}}};},
     onRecruiterFightChange:state=>states.push(state),onMove:state=>{reports.push(state);if(state.recruiterCombat?.phase==='seated')ui.world.setRecruiterEncounter(null,'test-owner');},onRecruiterFightFrame:frame=>audio.push(frame),
   }});
-  ui.world.setRecruiterEncounter(null,'test-owner');
-  const run=(n,key)=>{if(key)ui.fixture.face(Math.PI);if(key)ui.key('keydown',key);for(let frame=0;frame<n;frame++)ui.step();if(key)ui.key('keyup',key);};
-  for(let episode=0;episode<3;episode++){
-    run(24,'s');await new Promise(setImmediate);
-    assert.equal(hits,episode+1,`contact episode ${episode+1} produces one bump`);
-    run(16,'s');await new Promise(setImmediate);assert.equal(hits,episode+1,'holding into the chair cannot count repeatedly');
-    if(episode===2){assert.ok(ui.fixture.pmDebug().combat,JSON.stringify(states.slice(-4)));assert.equal(ui.fixture.pmDebug().combat.elapsed,0,'the chair and seated recruiter pause while a person blocks the initial slide');assert.ok(Math.abs(ui.fixture.pmDebug().chairOffset)<1e-8);assert.ok(states.some(state=>state.message?.includes('little room')),'a blocked physical transfer keeps its pause nudge visible');}
-    run(18,'w');run(6);await new Promise(setImmediate);
-  }
-  const stages=new Set(states.map(state=>state.stage));let maxFallTravel=0;
-  for(let frame=0;frame<130;frame++){
-    ui.step();const debug=ui.fixture.pmDebug();const state=debug.combat;if(state){stages.add(state.phase);maxFallTravel=Math.max(maxFallTravel,Math.abs(state.x-pmHome.x));}
-    if(state?.phase==='fighting')break;
-  }
-  assert.ok(stages.has('falling')&&stages.has('recovering'),'the actual recruiter tumbles and visibly recovers');
-  assert.ok(maxFallTravel>1,'the recruiter falls onto a clear patch beside its chair');
-  assert.equal(ui.world.getRecruiterFightState().stage,'fighting',JSON.stringify(ui.fixture.pmDebug().combat));
-  assert.equal(ui.world.attackRecruiter('kick'),true,'the local visitor can kick while fighting');
-  run(20);
-  assert.ok(ui.fixture.pmDebug().combat.recruiterHealth<100,'the kick connects within the measured skinned-character reach');
-  assert.ok(reports.some(report=>report.recruiterCombat?.encounterId==='physical-pm-duel'),'stationary combat publishes its shared owner state');
-  assert.ok(audio.some(frame=>frame.impacts.length),'actual contact produces a distinct spatial impact');
-  assert.equal(ui.world.endRecruiterFight(),true);
-  for(let frame=0;frame<360&&!reports.some(report=>report.recruiterCombat?.phase==='seated');frame++)ui.step();
-  assert.equal(ui.world.getRecruiterFightState().stage,'idle',JSON.stringify(ui.fixture.pmDebug().combat));
-  ui.step();assert.equal(ui.world.getRecruiterFightState().stage,'idle','synchronous local presence acknowledgement cannot break the animation loop');
-  assert.equal(ui.fixture.pmDebug().chairOffset,0,'the real chair returns smoothly to its starting slot');
-  assert.equal(ui.fixture.pmDebug().recruiter.getWorldPosition(new Vector3()).distanceTo(new Vector3(pmHome.x,0,pmHome.z)),0);
-  const final=reports.findLast(report=>report.recruiterCombat?.phase==='seated');assert.ok(final,'the final seated state remains reportable until its shared acknowledgement');
-  ui.world.setRecruiterEncounter(null,'test-owner');
-  assert.equal(ui.world.getRecruiterFightState().stage,'idle');assert.equal(ui.world.getPlayerState().recruiterCombat,null);
-  assert.ok(states.some(state=>state.stage==='progress'),'the bottom controls show partial bump progress');
+  ui.world.setRecruiterEncounter(null,'test-owner');ui.fixture.face(Math.atan2(-.91,.10));ui.step();
+  assert.equal(ui.world.getRecruiterFightState().stage,'nearby');
+  ui.key('keydown','a');for(let f=0;f<20;f++)ui.step();ui.key('keyup','a');
+  assert.equal(starts,0);assert.equal(bumps,0,'bumping no longer starts combat');
+  assert.ok(ui.fixture.place({x:pmHome.x+.91,z:pmHome.z-.10},Math.atan2(-.91,.10)));
+  assert.equal(ui.world.attackRecruiter('punch'),true);await new Promise(setImmediate);
+  assert.equal(ui.world.getRecruiterFightState().stage,'provoking');
+  for(let f=0;f<25&&ui.world.getRecruiterFightState().stage==='provoking';f++)ui.step();
+  assert.equal(ui.world.getRecruiterFightState().stage,'falling',JSON.stringify(ui.fixture.pmDebug().combat));
+  assert.equal(ui.fixture.pmDebug().combat.recruiterHealth,80,'the initial real hand contact knocks the recruiter off the chair');
+  for(let f=0;f<50&&ui.world.getRecruiterFightState().stage!=='grounded';f++)ui.step();
+  let combat=ui.fixture.pmDebug().combat;assert.equal(combat.phase,'grounded');
+  assert.ok(ui.fixture.place({x:combat.x,z:combat.z-.92},0),'the player approaches a clear side of the fallen body');
+  assert.equal(ui.world.attackRecruiter('kick'),true);
+  for(let f=0;f<18;f++)ui.step();
+  combat=ui.fixture.pmDebug().combat;assert.equal(combat.recruiterHealth,50,JSON.stringify(combat));
+  for(let f=0;f<50&&!['approaching','fighting'].includes(ui.world.getRecruiterFightState().stage);f++)ui.step();
+  assert.equal(ui.world.attackRecruiter('punch'),true);
+  for(let f=0;f<15;f++)ui.step();
+  combat=ui.fixture.pmDebug().combat;assert.equal(combat.recruiterHealth,30,'a standing punch after recovery charges the third real hit');
+  for(let f=0;f<60&&!ui.world.getRecruiterFightState().slamReady;f++)ui.step();
+  assert.equal(ui.world.getRecruiterFightState().slamReady,true,JSON.stringify({combat:ui.fixture.pmDebug().combat,collision:ui.fixture.pmCollision}));
+  assert.equal(ui.world.attackRecruiter('slam'),true);
+  const points=[];for(let f=0;f<60;f++){ui.step();const c=ui.fixture.pmDebug().combat;if(c?.phase==='slamming')points.push({x:c.x,z:c.z,y:ui.fixture.pmDebug().recruiter.position.y,hips:ui.fixture.pmDebug().recruiter.userData.rig.hips.quaternion.clone(),head:ui.fixture.pmDebug().recruiter.userData.rig.head.quaternion.clone()});if(c?.phase==='returning')break;}
+  assert.ok(points.length>8,'the slam has a visible supported timeline');assert.ok(points.some(p=>p.y>.4),'the recruiter visibly lifts before dropping');
+  for(let i=1;i<points.length;i++){assert.ok(Math.hypot(points[i].x-points[i-1].x,points[i].z-points[i-1].z)<.25,'a throw never teleports through a prop or character');assert.ok(points[i].hips.angleTo(points[i-1].hips)<.65&&points[i].head.angleTo(points[i-1].head)<.65,'the lifted body blends continuously into its fall');}
+  assert.ok(audio.some(frame=>frame.impacts.some(impact=>impact.type==='slam')),'the actual throw contact has an impact sound');
+  for(let f=0;f<300&&!reports.some(r=>r.recruiterCombat?.phase==='seated');f++)ui.step();
+  assert.equal(ui.world.getRecruiterFightState().stage,'idle',JSON.stringify(ui.fixture.pmDebug().combat));ui.step();
+  assert.equal(starts,1,'a direct encounter is claimed once');assert.equal(ui.world.getPlayerState().recruiterCombat,null);
+});
+
+test('a downward punch hits the grounded recruiter from a collision-clear approach',t=>{
+  const x=pmHome.x-1.2,z=pmHome.z-.23;
+  const ui=setup(t,{jobs:allJobs.slice(0,4),spawn:{x,z:z-.92}});
+  ui.world.setRecruiterEncounter({id:'grounded-punch',ownerId:'test-owner',startedAt:1800000000000,updatedAt:1800000000000,combat:{phase:'grounded',elapsed:0,x,z,rotation:0,playerHealth:100,recruiterHealth:100,playerAttack:null,recruiterAttack:null,hitSeq:0,outcome:null,chairOffset:-.45,sitProgress:null,slamReady:false,slamReadyAt:0,slamHits:0}},'test-owner');
+  ui.step();assert.ok(ui.fixture.place({x,z:z-.92},0));assert.equal(ui.world.attackRecruiter('punch'),true);
+  for(let f=0;f<8;f++)ui.step();
+  assert.equal(ui.fixture.pmDebug().combat.recruiterHealth,80,JSON.stringify(ui.fixture.pmDebug().combat));
 });
 
 test('observers hear the actual encounter location and return a disconnected owner’s recruiter to the solid chair',t=>{
@@ -161,7 +171,11 @@ test('observers hear the actual encounter location and return a disconnected own
   assert.equal(frame.source.x,encounter.combat.x,'an observer without the owner avatar uses the recruiter position instead of halving listener distance');
   assert.equal(frame.source.z,encounter.combat.z);
   assert.equal(ui.fixture.pmDebug().chairOffset,-.45,'the visible chair follows its shared offset');
-  ui.world.setRecruiterEncounter(null,'observer');
+  const owner={id:'another-visitor',x:encounter.combat.x,z:encounter.combat.z-.92,rotation:0,hair:5,name:'Other candidate',seatedJobId:null};
+  ui.world.setVisitors([owner]);
+  ui.world.setRecruiterEncounter({...encounter,combat:{...encounter.combat,phase:'slamming',elapsed:500,slamOrigin:{x:encounter.combat.x,z:encounter.combat.z},slamLanding:{x:encounter.combat.x-1.15,z:encounter.combat.z},slamReady:false,slamReadyAt:1800000008000,slamHits:0}},'observer');ui.step();
+  const remote=ui.fixture.pmDebug().visitors[0];assert.ok(remote?.placed);assert.ok(remote.character.userData.rig.rightArm.rotation.x<-1.4,'other candidates see the owner hold the grab through the lift');assert.ok(ui.fixture.pmDebug().recruiter.position.y>.4,'other candidates see the recruiter lift');
+  ui.world.setVisitors([]);ui.world.setRecruiterEncounter(null,'observer');
   for(let frame=0;frame<260&&ui.world.getRecruiterFightState().stage!=='idle';frame++)ui.step();
   assert.equal(ui.world.getRecruiterFightState().stage,'idle',JSON.stringify(ui.fixture.pmDebug().combat));
   assert.ok(Math.abs(ui.fixture.pmDebug().chairOffset)<1e-8,'a departed owner cannot leave the NPC or chair frozen in combat');

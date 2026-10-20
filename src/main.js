@@ -293,18 +293,18 @@ function startWorld() {
       onRecruiterFightFrame(frame) {
         if (isCurrent()) recruiterFightAudio.update(frame);
       },
-      async onRecruiterBump({ contactKind } = {}) {
-        if (!isCurrent() || !presence?.bumpRecruiter || !world) return null;
+      async onRecruiterAttack({ type } = {}) {
+        if (!isCurrent() || !presence?.startRecruiterAttack || !world) return null;
         const activeWorld = world, activePresence = presence;
         activePresence.update(activeWorld.getPlayerState());
-        const result = await activePresence.bumpRecruiter(contactKind);
+        const result = await activePresence.startRecruiterAttack(type);
         if (!isCurrent() || world !== activeWorld || presence !== activePresence) return null;
         activeWorld.setRecruiterEncounter?.(result?.recruiterEncounter ?? null, activePresence.id);
         return result;
       },
       onRecruiterFightChange(state) {
         if (!isCurrent()) return;
-        const active = Boolean(state?.localPlayer && ['falling', 'grounded', 'recovering', 'approaching', 'fighting', 'returning'].includes(state.stage));
+        const active = Boolean(state?.localPlayer && ['provoking', 'falling', 'grounded', 'recovering', 'approaching', 'fighting', 'slamming', 'returning'].includes(state.stage));
         if (active && !recruiterCombatActive) {
           claimGeneration++;
           application.cancelPending();

@@ -15,8 +15,8 @@ export const RECRUITER_ENCOUNTER_TTL_MS = 60_000;
 export const RECRUITER_RESET_MS = 3_000;
 export const RECRUITER_HOME = Object.freeze({ x: SEAT_POSITIONS['product-manager'].x, z: SEAT_POSITIONS['product-manager'].z - 2.62 });
 const RECRUITER_RANGE = 1.7;
-const COMBAT_PHASES = new Set(['falling', 'grounded', 'recovering', 'approaching', 'fighting', 'returning', 'seated']);
-const actions = new Set(['join', 'move', 'leave', 'claim', 'release', 'challenge', 'recruiter-bump']);
+const COMBAT_PHASES = new Set(['provoking', 'falling', 'grounded', 'recovering', 'approaching', 'fighting', 'slamming', 'returning', 'seated']);
+const actions = new Set(['join', 'move', 'leave', 'claim', 'release', 'challenge', 'recruiter-bump', 'recruiter-attack']);
 const publicFields = visitor => ({ id: visitor.id, name: normalizeVisitorName(visitor.name) || 'Visitor', x: visitor.x, z: visitor.z, hair: visitor.hair, rotation: visitor.rotation, seatedJobId: visitor.seatedJobId ?? null, lastSeen: visitor.lastSeen, ...(visitor.combatAction ? { combatAction: { ...visitor.combatAction } } : {}) });
 // Omitting a name is different from explicitly supplying an empty name: older
 // clients must not replace an existing visitor's chosen name with a fallback.
@@ -24,9 +24,33 @@ const nameFields = state => Object.hasOwn(state, 'name') ? { name: normalizeVisi
 
 function combatAction(value) {
   if (value === null) return null;
-  if (!value || !['punch', 'kick'].includes(value.type) || !Number.isSafeInteger(value.seq) || value.seq < 0 || value.seq > 1_000_000
+  if (!value || !['punch', 'kick', 'slam'].includes(value.type) || !Number.isSafeInteger(value.seq) || value.seq < 0 || value.seq > 1_000_000
     || !Number.isFinite(value.startedAt) || value.startedAt < 0 || value.startedAt > Number.MAX_SAFE_INTEGER) throw new Error('Invalid combat action.');
   return { type: value.type, seq: value.seq, startedAt: value.startedAt };
+}
+
+function slamFields(value) {
+  const result = {};
+  if (Object.hasOwn(value, 'slamReady')) {
+    if (typeof value.slamReady !== 'boolean') throw new Error('Invalid slam readiness.');
+    result.slamReady = value.slamReady;
+  }
+  if (Object.hasOwn(value, 'slamReadyAt')) {
+    if (!Number.isFinite(value.slamReadyAt) || value.slamReadyAt < 0 || value.slamReadyAt > Number.MAX_SAFE_INTEGER) throw new Error('Invalid slam cooldown.');
+    result.slamReadyAt = value.slamReadyAt;
+  }
+  if (Object.hasOwn(value, 'slamHits')) {
+    if (!Number.isSafeInteger(value.slamHits) || value.slamHits < 0 || value.slamHits > 3) throw new Error('Invalid slam hit count.');
+    result.slamHits = value.slamHits;
+  }
+  for (const key of ['slamOrigin', 'slamLanding']) {
+    if (!Object.hasOwn(value, key)) continue;
+    const point = value[key];
+    if (point === null) continue;
+    if (!point || ![point.x, point.z].every(Number.isFinite) || Math.hypot(point.x - RECRUITER_HOME.x, point.z - RECRUITER_HOME.z) > 20) throw new Error('Invalid slam position.');
+    result[key] = { x: point.x, z: point.z };
+  }
+  return result;
 }
 
 function combatFields(state) {
@@ -48,13 +72,17 @@ function combatFields(state) {
         playerHealth: value.playerHealth, recruiterHealth: value.recruiterHealth, playerAttack: combatAction(value.playerAttack ?? null),
         recruiterAttack: combatAction(value.recruiterAttack ?? null), hitSeq: value.hitSeq, outcome: value.outcome ?? null,
         ...(Object.hasOwn(value, 'chairOffset') ? { chairOffset: value.chairOffset } : {}),
-        ...(Object.hasOwn(value, 'sitProgress') ? { sitProgress: value.sitProgress } : {}) };
+        ...(Object.hasOwn(value, 'sitProgress') ? { sitProgress: value.sitProgress } : {}), ...slamFields(value) };
     }
   }
   return result;
 }
 
-const publicEncounter = value => value ? { id: value.id, ownerId: value.ownerId, startedAt: value.startedAt, updatedAt: value.updatedAt, combat: value.combat ? structuredClone(value.combat) : null } : null;
+const publicEncounter = value => value ? { id: value.id, ownerId: value.ownerId, startedAt: value.startedAt, updatedAt: value.updatedAt, ...(value.initialAttack ? { initialAttack: value.initialAttack } : {}), combat: value.combat ? structuredClone(value.combat) : null } : null;
+
+const initialRecruiterCombat = (id, time) => ({ encounterId: id, phase: 'provoking', elapsed: 0, x: RECRUITER_HOME.x, z: RECRUITER_HOME.z, rotation: 0,
+  playerHealth: 100, recruiterHealth: 100, playerAttack: null, recruiterAttack: null, hitSeq: 0, outcome: null,
+  slamReady: false, slamReadyAt: time, slamHits: 0 });
 
 export function validateCommand(value) {
   if (!value || !actions.has(value.action)) throw new Error('Unknown action.');
@@ -63,12 +91,13 @@ export function validateCommand(value) {
   if (value.action === 'claim' && !SEAT_IDS.includes(value.jobId)) throw new Error('Unknown seat.');
   if (value.action === 'challenge' && !JOB_IDS.includes(value.jobId)) throw new Error('Unknown seat.');
   if (value.action === 'recruiter-bump' && !['chair', 'recruiter'].includes(value.contactKind)) throw new Error('Invalid recruiter contact.');
+  if (value.action === 'recruiter-attack' && !['punch', 'kick'].includes(value.type)) throw new Error('Invalid initial recruiter attack.');
   const state = value.state || {};
-  if (['join', 'move', 'claim', 'challenge', 'recruiter-bump'].includes(value.action)) {
+  if (['join', 'move', 'claim', 'challenge', 'recruiter-bump', 'recruiter-attack'].includes(value.action)) {
     if (![state.x, state.z, state.rotation].every(Number.isFinite) || Math.abs(state.x) > 1_000_000 || Math.abs(state.z) > 1_000_000 || Math.abs(state.rotation) > 1000) throw new Error('Invalid position.');
     if (!Number.isInteger(state.hair) || state.hair < 0 || state.hair > 5) throw new Error('Invalid hairstyle.');
   }
-  return { action: value.action, id: value.id, token: value.token, jobId: value.jobId, ...(value.action === 'recruiter-bump' ? { contactKind: value.contactKind } : {}), state: { x: state.x, z: state.z, rotation: state.rotation, hair: state.hair, ...nameFields(state), ...combatFields(state) } };
+  return { action: value.action, id: value.id, token: value.token, jobId: value.jobId, ...(value.action === 'recruiter-bump' ? { contactKind: value.contactKind } : {}), ...(value.action === 'recruiter-attack' ? { type: value.type } : {}), state: { x: state.x, z: state.z, rotation: state.rotation, hair: state.hair, ...nameFields(state), ...combatFields(state) } };
 }
 
 // The local development process shares this store across all connected browsers.
@@ -94,7 +123,7 @@ export function createMemoryWorld({ now = Date.now } = {}) {
     async dispatch(command = { action: 'snapshot' }) {
       const time = now(); clean(time);
       if (command.action === 'snapshot') return snapshot(time);
-      const { action, id, token, state, jobId, contactKind } = command;
+      const { action, id, token, state, jobId, contactKind, type } = command;
       const previous = visitors.get(id);
       if (previous && previous.token !== token) return { error: 'Visitor credential does not match.', code: 403 };
       const release = () => { for (const [key, owner] of seats) if (owner === id) seats.delete(key); };
@@ -107,7 +136,7 @@ export function createMemoryWorld({ now = Date.now } = {}) {
       const visitor = { ...(previous || { id, token, name: 'Visitor', x: 0, z: 0, rotation: 0, hair: 5, seatedJobId: null }), ...(state?.x !== undefined ? state : {}), ...nameFields(state || {}), lastSeen: time };
       delete visitor.recruiterCombat;
       if (visitor.seatedJobId && seats.get(visitor.seatedJobId) !== id) visitor.seatedJobId = null;
-      let claimed, challenge, recruiterBump;
+      let claimed, challenge, recruiterBump, recruiterAttack;
       if (action === 'release') { release(); visitor.seatedJobId = null; }
       if (action === 'claim') {
         claimed = (!getBotOccupiedJobs(time, jobs).includes(jobId) || botDefeats.has(jobId)) && (!seats.has(jobId) || seats.get(jobId) === id);
@@ -149,6 +178,19 @@ export function createMemoryWorld({ now = Date.now } = {}) {
           if (!recruiterBump.started) recruiterProgress.set(id, progress);
         }
       }
+      if (action === 'recruiter-attack') {
+        recruiterAttack = { type, started: false };
+        if (!['punch', 'kick'].includes(type)) recruiterAttack.reason = 'invalid-attack';
+        else if (visitor.seatedJobId) recruiterAttack.reason = 'seated';
+        else if (Math.hypot(visitor.x - RECRUITER_HOME.x, visitor.z - RECRUITER_HOME.z) > RECRUITER_RANGE + 1e-9) recruiterAttack.reason = 'too-far';
+        else if (recruiterEncounter) recruiterAttack.reason = 'busy';
+        else if (time < recruiterResetUntil) recruiterAttack.reason = 'cooldown';
+        else {
+          const encounterId = `${id}:${time}`;
+          recruiterEncounter = { id: encounterId, ownerId: id, startedAt: time, updatedAt: time, initialAttack: type, combat: initialRecruiterCombat(encounterId, time) };
+          recruiterAttack.started = true; recruiterProgress.delete(id);
+        }
+      }
       if (recruiterEncounter?.ownerId === id) {
         const reported = state?.recruiterCombat;
         if (visitor.seatedJobId || (reported?.encounterId === recruiterEncounter.id && reported.phase === 'seated')) finishRecruiter(time);
@@ -162,7 +204,7 @@ export function createMemoryWorld({ now = Date.now } = {}) {
       else visitor.combatAction = combatAction(attack);
       if (visitor.seatedJobId) Object.assign(visitor, SEAT_POSITIONS[visitor.seatedJobId]);
       visitors.set(id, visitor);
-      return { ...snapshot(time), ...(claimed !== undefined ? { claimed } : {}), ...(challenge ? { challenge } : {}), ...(recruiterBump ? { recruiterBump } : {}) };
+      return { ...snapshot(time), ...(claimed !== undefined ? { claimed } : {}), ...(challenge ? { challenge } : {}), ...(recruiterBump ? { recruiterBump } : {}), ...(recruiterAttack ? { recruiterAttack } : {}) };
     },
   };
 }
@@ -194,7 +236,7 @@ end
 local function release()
   for _, key in ipairs(jobIds) do if redis.call('GET', seatKey(key)) == id then redis.call('DEL', seatKey(key)) end end
 end
-local claimed, challenge, recruiterBump = nil, nil, nil
+local claimed, challenge, recruiterBump, recruiterAttack = nil, nil, nil, nil
 local defeatKey = prefix .. 'bot-defeats'
 if action ~= 'snapshot' then
   local raw = redis.call('GET', visitorKey(id))
@@ -270,6 +312,23 @@ if action ~= 'snapshot' then
         if not recruiterBump.started then redis.call('SET',recruiterProgressKey,cjson.encode(progress),'PX',${RECRUITER_PROGRESS_TTL_MS}) end
       end
     end
+    if action == 'recruiter-attack' then
+      local home=seatPositions['product-manager']
+      recruiterAttack={type=state._recruiterAttack,started=false}
+      if state._recruiterAttack ~= 'punch' and state._recruiterAttack ~= 'kick' then recruiterAttack.reason='invalid-attack'
+      elseif visitor.seatedJobId and visitor.seatedJobId ~= cjson.null then recruiterAttack.reason='seated'
+      elseif (visitor.x-home.x)^2 + (visitor.z-(home.z-2.62))^2 > (${RECRUITER_RANGE}+1e-9)^2 then recruiterAttack.reason='too-far'
+      elseif recruiterEncounter then recruiterAttack.reason='busy'
+      elseif recruiterResetAt then recruiterAttack.reason='cooldown'
+      else
+        local encounterId=id .. ':' .. now
+        recruiterEncounter={id=encounterId,ownerId=id,startedAt=now,updatedAt=now,initialAttack=state._recruiterAttack,
+          combat={encounterId=encounterId,phase='provoking',elapsed=0,x=home.x,z=home.z-2.62,rotation=0,
+          playerHealth=100,recruiterHealth=100,playerAttack=cjson.null,recruiterAttack=cjson.null,hitSeq=0,outcome=cjson.null,
+          slamReady=false,slamReadyAt=now,slamHits=0}}
+        recruiterAttack.started=true; redis.call('DEL',prefix .. 'pm-bumps:' .. id)
+      end
+    end
     if recruiterEncounter and recruiterEncounter.ownerId == id then
       local reported=state.recruiterCombat
       local matches=reported and reported ~= cjson.null and reported.encounterId == recruiterEncounter.id
@@ -293,6 +352,7 @@ local result={visitors={}, seats={}, botDefeats={}, recruiterEncounter=recruiter
 if claimed ~= nil then result.claimed=claimed end
 if challenge ~= nil then result.challenge=challenge end
 if recruiterBump ~= nil then result.recruiterBump=recruiterBump end
+if recruiterAttack ~= nil then result.recruiterAttack=recruiterAttack end
 local defeats=redis.call('HGETALL',defeatKey)
 for index=1,#defeats,2 do result.botDefeats[defeats[index]]=tonumber(defeats[index+1]) end
 for _, visitorId in ipairs(redis.call('SMEMBERS',visitorSet)) do
@@ -319,7 +379,7 @@ export function createRedisWorld({ url, token, fetcher = fetch, now = Date.now }
   return {
     async dispatch(command = { action: 'snapshot' }) {
       const time = now();
-      const state = { ...(command.state || {}), ...nameFields(command.state || {}), ...(command.action === 'recruiter-bump' ? { _recruiterContact: command.contactKind } : {}) };
+      const state = { ...(command.state || {}), ...nameFields(command.state || {}), ...(command.action === 'recruiter-bump' ? { _recruiterContact: command.contactKind } : {}), ...(command.action === 'recruiter-attack' ? { _recruiterAttack: command.type } : {}) };
       const response = await fetcher(url.replace(/\/$/, ''), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(['EVAL', LUA, 0, PREFIX, command.action, command.id || '', command.token || '', time, VISITOR_TTL_MS, JSON.stringify(state), command.jobId || '', JSON.stringify(SEAT_IDS), JSON.stringify(getBotOccupiedJobs(time, jobs)), JSON.stringify(SEAT_POSITIONS)]), signal: AbortSignal.timeout(6000) });
       if (!response.ok) throw new Error('Shared world storage is unavailable.');
       const value = await response.json();

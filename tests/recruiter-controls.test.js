@@ -57,20 +57,25 @@ function fixture(callbacks = {}) {
 }
 const fighting = { stage: 'fighting', localPlayer: true, playerHealth: 100, recruiterHealth: 100, encounterId: 'round-1' };
 
-test('progress explains deliberate bumps and controls appear during recovery without stealing focus', () => {
+test('walking nearby introduces J/K immediately without a click, bump or focus change', () => {
   const ui = fixture();
   assert.equal(ui.api.isOpen(), false);
-  ui.api.update({ stage: 'progress', hits: 1, required: 3, localPlayer: true });
-  assert.match(ui.find('status').textContent, /1 of 3.*Step back/);
-  assert.equal(ui.find('actions').hidden, true);
-  ui.api.update({ stage: 'progress', hits: 2 });
-  assert.match(ui.find('status').textContent, /One more bump.*chair/);
-  ui.api.update({ stage: 'recovering' });
-  assert.equal(ui.find('actions').hidden, false);
-  assert.equal(ui.buttons()[0].disabled, true);
-  assert.equal(ui.buttons()[1].disabled, true);
   assert.equal(ui.key('j').defaultPrevented, false);
-  assert.deepEqual(ui.attacks, []);
+  ui.api.update({ stage: 'nearby', localPlayer: true });
+  assert.match(ui.find('status').textContent, /Press J to punch or K to kick/);
+  assert.match(ui.find('hint').textContent, /No bumping or clicking needed/);
+  assert.equal(ui.find('actions').hidden, false);
+  assert.equal(ui.buttons()[0].disabled, false);
+  assert.equal(ui.buttons()[1].disabled, false);
+  assert.equal(ui.find('health').hidden, true);
+  assert.equal(ui.key('j').defaultPrevented, true);
+  ui.api.update({ stage: 'nearby' });
+  ui.key('j');
+  assert.deepEqual(ui.attacks, ['punch'], 'repeated proximity frames do not re-arm a held key');
+  ui.up('j'); ui.key('k');
+  assert.deepEqual(ui.attacks, ['punch', 'kick']);
+  ui.api.update({ stage: 'idle' });
+  assert.equal(ui.api.isOpen(), false, 'leaving proximity removes the hint');
   assert.equal(ui.doc.activeElement, ui.canvas);
   assert.equal(ui.container.all().some(node => node.focusCalls), false);
   ui.api.dispose();
@@ -94,8 +99,95 @@ test('J and K accept fresh local presses once, leave movement alone, and share t
   ui.api.dispose();
 });
 
+test('J/K stay available through provocation, falling, ground contact, recovery and approach', () => {
+  const ui = fixture();
+  const stages = ['nearby', 'provoking', 'falling', 'grounded', 'recovering', 'approaching', 'fighting'];
+  for (const stage of stages) {
+    ui.api.update({ ...fighting, stage });
+    assert.equal(ui.find('actions').hidden, false, `${stage} shows direct attack controls`);
+    assert.equal(ui.key('j').defaultPrevented, true, `J remains available during ${stage}`);
+    ui.up('j');
+    assert.equal(ui.key('k').defaultPrevented, true, `K remains available during ${stage}`);
+    ui.up('k');
+  }
+  assert.deepEqual(ui.attacks, stages.flatMap(() => ['punch', 'kick']));
+  ui.api.dispose();
+});
+
+test('L and its button require slam readiness with a standing target and one fresh press', () => {
+  const ui = fixture(); ui.api.update({ ...fighting, slamReady: false, slamHits: 2 });
+  assert.equal(ui.key('l').defaultPrevented, false);
+  ui.buttons()[2].fire('click', {});
+  assert.equal(ui.buttons()[2].disabled, true);
+  assert.deepEqual(ui.attacks, []);
+  ui.api.update({ slamReady: true, slamHits: 3 });
+  assert.equal(ui.buttons()[2].disabled, false);
+  assert.equal(ui.key('l').defaultPrevented, true);
+  ui.key('l'); ui.key('l', { repeat: true });
+  assert.deepEqual(ui.attacks, ['slam']);
+  ui.up('l'); ui.key('x', { code: 'KeyL' });
+  ui.buttons()[2].fire('click', {});
+  assert.deepEqual(ui.attacks, ['slam', 'slam', 'slam']);
+  ui.up('l'); ui.api.update({ slamReady: false });
+  assert.equal(ui.key('l').defaultPrevented, false);
+  assert.equal(ui.buttons()[2].disabled, true);
+  for (const stage of ['nearby', 'provoking', 'falling', 'grounded', 'recovering']) {
+    ui.api.update({ stage, slamReady: true });
+    assert.equal(ui.key('l').defaultPrevented, false, `L does not slam a non-standing target during ${stage}`);
+  }
+  assert.deepEqual(ui.attacks, ['slam', 'slam', 'slam']);
+  ui.api.update({ stage: 'approaching', slamReady: true });
+  assert.equal(ui.key('l').defaultPrevented, true);
+  assert.equal(ui.attacks.at(-1), 'slam');
+  ui.api.dispose();
+});
+
+test('slam readiness describes hit progress and the shared-clock cooldown without changing live status', () => {
+  const ui = fixture();
+  ui.api.update({ ...fighting, slamHits: 1, slamReady: false, slamReadyAt: 4500, now: 1000 });
+  assert.match(ui.find('special').textContent, /4s cooldown.*1\/3 hits/);
+  const statusWrites = ui.find('status').writes;
+  ui.api.update({ now: 2000 });
+  assert.match(ui.find('special').textContent, /3s cooldown/);
+  ui.api.update({ now: 5000, slamHits: 2 });
+  assert.match(ui.find('special').textContent, /2\/3 hits/);
+  ui.api.update({ slamHits: 3 });
+  assert.match(ui.find('special').textContent, /Make a little room/);
+  assert.equal(ui.buttons()[2].disabled, true, 'three hits alone do not bypass the world landing preflight');
+  ui.api.update({ slamReady: true });
+  assert.equal(ui.find('special').textContent, 'Choke slam ready · L');
+  assert.equal(ui.find('special').getAttribute('data-ready'), 'true');
+  assert.equal(ui.buttons()[2].disabled, false);
+  assert.equal(ui.find('status').writes, statusWrites, 'cooldown and hit updates do not repeat the stage announcement');
+  ui.api.update({ slamReady: false, slamHits: 0, slamReadyAt: 8000 });
+  assert.match(ui.find('special').textContent, /3s cooldown.*0\/3 hits/);
+  ui.api.dispose();
+});
+
+test('health remains visible through active stages while slamming and return hide attack controls', () => {
+  const ui = fixture();
+  for (const stage of ['provoking', 'falling', 'grounded', 'recovering', 'approaching', 'fighting', 'slamming', 'returning']) {
+    ui.api.update({ ...fighting, stage, playerHealth: 80, recruiterHealth: 65, slamReady: true });
+    assert.equal(ui.find('health').hidden, false, `health stays visible during ${stage}`);
+    assert.equal(ui.find('health').textContent, 'You 80 · Recruiter 65');
+  }
+  for (const stage of ['slamming', 'returning']) {
+    ui.api.update({ ...fighting, stage, slamReady: true });
+    assert.equal(ui.find('actions').hidden, true);
+    assert.equal(ui.find('special').hidden, true);
+    for (const key of ['j', 'k', 'l']) assert.equal(ui.key(key).defaultPrevented, false);
+    ui.buttons().slice(0, 3).forEach(button => button.fire('click', {}));
+  }
+  assert.deepEqual(ui.attacks, []);
+  assert.equal(ui.key('Escape').defaultPrevented, false, 'returning is already disengaged');
+  ui.api.update({ stage: 'slamming' });
+  assert.equal(ui.key('Escape').defaultPrevented, true, 'the world can safely queue disengagement during a slam');
+  assert.deepEqual(ui.departures, [true]);
+  ui.api.dispose();
+});
+
 test('editable fields, modifier shortcuts, composition and already handled events retain their normal behavior', () => {
-  const ui = fixture(); ui.api.update(fighting);
+  const ui = fixture(); ui.api.update({ ...fighting, slamReady: true });
   const suppressed = [
     { target: { tagName: 'INPUT' } }, { target: { tagName: 'TEXTAREA' } }, { target: { tagName: 'SELECT' } },
     { target: { isContentEditable: true } }, { target: { closest: () => ({}) } },
@@ -105,6 +197,7 @@ test('editable fields, modifier shortcuts, composition and already handled event
   for (const options of suppressed) {
     const e = ui.key('j', options);
     assert.equal(e.stopped, undefined);
+    ui.key('l', options);
     ui.key('Escape', options);
   }
   assert.deepEqual(ui.attacks, []); assert.deepEqual(ui.departures, []);
@@ -112,12 +205,12 @@ test('editable fields, modifier shortcuts, composition and already handled event
 });
 
 test('spectators see status but cannot attack or disengage somebody else’s encounter', () => {
-  const ui = fixture(); ui.api.update({ ...fighting, localPlayer: false });
+  const ui = fixture(); ui.api.update({ ...fighting, localPlayer: false, slamReady: true });
   assert.equal(ui.api.isOpen(), true);
   assert.match(ui.find('status').textContent, /Another visitor/);
   assert.equal(ui.find('actions').hidden, true);
-  for (const key of ['j', 'k', 'Escape']) assert.equal(ui.key(key).defaultPrevented, false);
-  ui.buttons()[0].fire('click', {}); ui.buttons()[1].fire('click', {}); ui.buttons()[2].fire('click', {});
+  for (const key of ['j', 'k', 'l', 'Escape']) assert.equal(ui.key(key).defaultPrevented, false);
+  ui.buttons().forEach(button => button.fire('click', {}));
   assert.deepEqual(ui.attacks, []); assert.deepEqual(ui.departures, []);
   ui.api.dispose();
 });
@@ -132,6 +225,8 @@ test('X hides the toast without ending combat, and later pose or health updates 
   ui.api.update({ stage: 'fighting', playerHealth: 80 });
   assert.equal(ui.api.isOpen(), false);
   ui.key('j'); assert.deepEqual(ui.attacks, ['punch']);
+  ui.api.update({ slamReady: true }); ui.key('l');
+  assert.deepEqual(ui.attacks, ['punch', 'slam'], 'a hidden toast retains an unlocked slam shortcut');
   ui.api.update({ stage: 'returning' }); assert.equal(ui.api.isOpen(), false);
   close.fire('click', click); assert.deepEqual(ui.dismissals, [click]);
   ui.api.update({ stage: 'seated' }); ui.api.update({ ...fighting, encounterId: 'round-2' });
@@ -139,11 +234,12 @@ test('X hides the toast without ending combat, and later pose or health updates 
   ui.api.dispose();
 });
 
-test('progress dismissal resets once when a fight begins so its controls are introduced', () => {
-  const ui = fixture(); ui.api.update({ stage: 'progress', hits: 1, localPlayer: true });
+test('a dismissed proximity hint still starts from J and reintroduces controls when provocation begins', () => {
+  const ui = fixture(); ui.api.update({ stage: 'nearby', localPlayer: true });
   ui.find('close').fire('click', {}); assert.equal(ui.api.isOpen(), false);
-  ui.api.update({ stage: 'progress', hits: 2 }); assert.equal(ui.api.isOpen(), false);
-  ui.api.update({ stage: 'falling' }); assert.equal(ui.api.isOpen(), true);
+  ui.api.update({ stage: 'nearby' }); assert.equal(ui.api.isOpen(), false);
+  ui.key('j'); assert.deepEqual(ui.attacks, ['punch']);
+  ui.api.update({ stage: 'provoking' }); assert.equal(ui.api.isOpen(), true);
   ui.find('close').fire('click', {});
   ui.api.update({ stage: 'recovering' }); ui.api.update({ stage: 'fighting' });
   assert.equal(ui.api.isOpen(), false);
@@ -168,10 +264,10 @@ test('Escape or the explicit leave button disengages once and does not imply a t
   const ui = fixture(); ui.api.update(fighting);
   const escape = ui.key('Escape');
   assert.equal(escape.defaultPrevented, true);
-  ui.key('Escape'); ui.buttons()[2].fire('click', {});
+  ui.key('Escape'); ui.buttons()[3].fire('click', {});
   assert.deepEqual(ui.departures, [true]); assert.deepEqual(ui.dismissals, []);
   ui.api.update({ stage: 'returning' }); ui.api.update({ ...fighting, encounterId: 'round-2' });
-  ui.buttons()[2].fire('click', {});
+  ui.buttons()[3].fire('click', {});
   assert.deepEqual(ui.departures, [true, true]);
   ui.api.dispose();
 });

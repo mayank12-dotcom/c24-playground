@@ -1453,7 +1453,10 @@ denied a loopback socket. No hands-on browser test, live Redis verification or
 new Vercel deployment is claimed. Earlier sections and test totals are historical.
 
 
-## Version 52 — playable Product Manager recruiter
+## Version 52 — playable Product Manager recruiter (historical)
+
+Version 54 supersedes the three-bump trigger below with nearby direct attacks.
+The following behavior and verification describe version 52 only.
 
 The Product Manager recruiter now responds to three deliberate bumps from any
 standing real visitor. The last contact must hit the recruiter chair. Releasing
@@ -1547,7 +1550,7 @@ covering the local source font faces, embedded font bytes, original UI/CSS,
 audio and JavaScript validation. This is a targeted font/export verification,
 not a rerun of the full historical gameplay suite.
 
-### Current browser evidence
+### Version 53 browser evidence
 
 Five bounded actual-Chromium checks passed against the final production build:
 
@@ -1582,3 +1585,90 @@ successful Vercel GitHub deployment status. This is separate from the browser
 boot result and does not prove a live Redis connection. Release paths are
 `common-ground-v53.html`, `common-ground-v53.zip`,
 `common-ground-v53-vercel.zip` and `common-ground-v53-MEMORY.md`.
+
+
+## Version 54 — direct Product Manager attacks and choke slam
+
+The visitor walks near the Product Manager recruiter chair and uses J/punch or
+K/kick immediately. There is no click or repeated-bump prerequisite. A first
+landed strike, rather than merely pressing the key, knocks the recruiter from
+the chair through the collision-checked slide/fall sequence. Ordinary attacks
+remain available while the recruiter is falling, grounded, recovering or
+standing and fighting back. The bottom hint explains these keys on approach
+without opening a job description or interrupting an existing opportunities
+window. Closing the hint keeps keyboard combat available; Esc disengages.
+
+Three landed ordinary hits make L/choke slam available against a close standing
+opponent. A successful slam consumes that opportunity and starts an eight-second
+cooldown. Its lift/drop trajectory is checked against the solid environment and
+other characters, and blocked physical motion pauses instead of passing through
+furniture. The original chair return and application seat remain available.
+The nineteen ambient characters and their existing fight stay separate.
+
+The shared API adds the `recruiter-attack` claim with a punch/kick initial action,
+a `provoking` phase before actual contact, and a `slamming` pose phase. Presence
+packets carry bounded readiness/cooldown/combo and throw-path fields. Existing
+owner/encounter checks remain in the memory and Redis implementations and client
+fallback. A spectator cannot overwrite the current owner's encounter. The old
+bump API remains a compatibility path; it is not the current frontend trigger.
+
+The original navigation, four self-hosted DM Sans/Space Grotesk font files,
+white outlined character shape, existing ambient bots and shared sound toggle
+are retained. Version 53's Chromium startup evidence remains historical; a new
+version 54 run must establish the current production-build startup and combat.
+
+Verification on 20 October 2026 (Asia/Calcutta), against the frozen version 54
+runtime:
+
+- The deterministic encounter controller passed 36 cases; bottom controls passed
+  16; the main application coordinator passed 58; and the actual scene/rig world
+  integration passed three. The latter covers the complete direct-hit/slam/return
+  chain, a downward punch against the grounded recruiter, and a remote owner's
+  grab/lift plus disconnect cleanup.
+- The recruiter API/presence suite passed 31 cases including nine executed by a
+  disposable local Redis server using the actual production Lua. After the
+  client-only active-encounter cadence change, the combined presence, furniture
+  seating and name suites passed 60 cases with those nine Redis cases skipped;
+  no server API or Lua changed between these runs. Four new cadence cases cover
+  the 125 ms encounter interval, ordinary polling restoration, in-flight/backoff
+  guards and the original encounter lifetime bound.
+- `npm run build` passed against the final runtime source fingerprint.
+  Standalone export passed, followed by seven export checks for the original
+  fonts/navigation, desktop guard, ten exact embedded audio files and executable
+  inline JavaScript. The original character model/motion, main navigation CSS,
+  audio controllers and four font files are byte-identical to version 53.
+- Actual Chromium against the production `dist` and local visitor API passed
+  all five startup checks: first-visit name entry/cache, WebGL world startup,
+  self-hosted fonts with external requests blocked, keyboard movement reaching
+  the API, help/opportunities/dismiss/sound controls, and the 1279 px notice with
+  no canvas. The movement check travelled 0.365625 world units. No browser error
+  or external request occurred. Report and inspected screenshot are
+  `artifacts/startup-v54-browser.json` and `.png`.
+- A separate actual Chromium combat run passed all ten checks with nineteen
+  ambient characters and forty successful HTTP API requests. J claimed through
+  `recruiter-attack`; physical contacts changed recruiter health 100 → 80 → 50 →
+  30; actual keyboard walking led the recruiter to a clear aisle; three hits
+  enabled L; the held grip remained continuous; the rig lifted more than 0.35
+  units; a real WebGL frame rendered; and the solid throw ended grounded. No
+  browser error or external request occurred. Report and inspected screenshot
+  are `artifacts/direct-combat-v54-browser.json` and `.png`.
+
+The combat browser fixture builds a temporary bundle of the actual main/world
+source and runs the actual local API. It controls only fixture placement,
+synchronized 50 ms simulation timing and GPU draw frequency. The production
+startup run uses the unmodified build with bounded frame bursts for the software
+GPU. Neither run is a frame-rate benchmark, a public Vercel browser session or a
+two-computer production Redis check. No fixture hooks ship in production scripts.
+The combat screenshot records the raised pose; a low foreground wall partially
+occludes the lower legs in the retained third-person camera.
+
+The publishing target remains `https://c24-playground.vercel.app/`. The release
+commit and its Vercel status are checked independently after the GitHub push;
+that report is included as `verification/version-54/github-deployment.json`
+in the portable archive once available.
+
+Current release targets are `common-ground-v54.html`, `common-ground-v54.zip`,
+`common-ground-v54-vercel.zip` and `common-ground-v54-MEMORY.md`. The source
+fingerprints and current verification reports accompany the portable source
+archive. Production Redis/two-computer visibility remains distinct from the
+isolated local API and browser checks above.

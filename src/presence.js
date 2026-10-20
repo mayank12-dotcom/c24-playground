@@ -10,11 +10,11 @@ const RECRUITER_PROGRESS_MS = 15_000;
 const RECRUITER_LIFETIME_MS = 60_000;
 const RECRUITER_RESET_MS = 3_000;
 const recruiterHome = { x: chairPositions['product-manager'].x, z: chairPositions['product-manager'].z - 2.62 };
-const recruiterPhases = new Set(['falling', 'grounded', 'recovering', 'approaching', 'fighting', 'returning', 'seated']);
+const recruiterPhases = new Set(['provoking', 'falling', 'grounded', 'recovering', 'approaching', 'fighting', 'slamming', 'returning', 'seated']);
 
 function normalizedRecruiterAction(value) {
   if (value == null) return null;
-  if (!['punch', 'kick'].includes(value.type) || !Number.isSafeInteger(value.seq) || value.seq < 0 || value.seq > 1_000_000
+  if (!['punch', 'kick', 'slam'].includes(value.type) || !Number.isSafeInteger(value.seq) || value.seq < 0 || value.seq > 1_000_000
     || !Number.isFinite(value.startedAt) || value.startedAt < 0 || value.startedAt > Number.MAX_SAFE_INTEGER) return undefined;
   return { type: value.type, seq: value.seq, startedAt: value.startedAt };
 }
@@ -26,13 +26,25 @@ function normalizedLocalCombat(combat) {
     || !Number.isSafeInteger(combat.hitSeq) || combat.hitSeq < 0 || combat.hitSeq > 1_000_000
     || ![null, 'player', 'recruiter', 'disengaged'].includes(combat.outcome ?? null)
     || (Object.hasOwn(combat, 'chairOffset') && (!Number.isFinite(combat.chairOffset) || combat.chairOffset < -.5 || combat.chairOffset > 0))
-    || (Object.hasOwn(combat, 'sitProgress') && combat.sitProgress !== null && (!Number.isFinite(combat.sitProgress) || combat.sitProgress < 0 || combat.sitProgress > 1))) return null;
+    || (Object.hasOwn(combat, 'sitProgress') && combat.sitProgress !== null && (!Number.isFinite(combat.sitProgress) || combat.sitProgress < 0 || combat.sitProgress > 1))
+    || (Object.hasOwn(combat, 'slamReady') && typeof combat.slamReady !== 'boolean')
+    || (Object.hasOwn(combat, 'slamReadyAt') && (!Number.isFinite(combat.slamReadyAt) || combat.slamReadyAt < 0 || combat.slamReadyAt > Number.MAX_SAFE_INTEGER))
+    || (Object.hasOwn(combat, 'slamHits') && (!Number.isSafeInteger(combat.slamHits) || combat.slamHits < 0 || combat.slamHits > 3))) return null;
+  const slam = {};
+  for (const key of ['slamReady', 'slamReadyAt', 'slamHits']) if (Object.hasOwn(combat, key)) slam[key] = combat[key];
+  for (const key of ['slamOrigin', 'slamLanding']) {
+    if (!Object.hasOwn(combat, key)) continue;
+    const point = combat[key];
+    if (point === null) continue;
+    if (!point || ![point.x, point.z].every(Number.isFinite) || Math.hypot(point.x - recruiterHome.x, point.z - recruiterHome.z) > 20) return null;
+    slam[key] = { x: point.x, z: point.z };
+  }
   const playerAttack = normalizedRecruiterAction(combat.playerAttack), recruiterAttack = normalizedRecruiterAction(combat.recruiterAttack);
   if (playerAttack === undefined || recruiterAttack === undefined) return null;
   return { encounterId: combat.encounterId, phase: combat.phase, elapsed: combat.elapsed, x: combat.x, z: combat.z, rotation: combat.rotation,
     playerHealth: combat.playerHealth, recruiterHealth: combat.recruiterHealth, playerAttack, recruiterAttack, hitSeq: combat.hitSeq, outcome: combat.outcome ?? null,
     ...(Object.hasOwn(combat, 'chairOffset') ? { chairOffset: combat.chairOffset } : {}),
-    ...(Object.hasOwn(combat, 'sitProgress') ? { sitProgress: combat.sitProgress } : {}) };
+    ...(Object.hasOwn(combat, 'sitProgress') ? { sitProgress: combat.sitProgress } : {}), ...slam };
 }
 
 const randomHex = bytes => [...crypto.getRandomValues(new Uint8Array(bytes))].map(value => value.toString(16).padStart(2, '0')).join('');
@@ -49,6 +61,7 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
   let mutation = Promise.resolve();
   let localAllowed = true, lastSeats = {};
   let lastRecruiterEncounter = null, localRecruiterEncounter = null, recruiterResetUntil = 0;
+  let recruiterFastUntil = 0;
   let recruiterProgress = { hits: 0, lastAt: -Infinity, updatedAt: 0 };
   const botDefeats = {};
   const setStatus = (next, message) => { if (mode !== next) { mode = next; onStatus({ mode: next, message }); } };
@@ -56,7 +69,7 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
     if (localRecruiterEncounter && (time - localRecruiterEncounter.startedAt >= RECRUITER_LIFETIME_MS || currentSeat)) {
       localRecruiterEncounter = null; recruiterResetUntil = time + RECRUITER_RESET_MS;
     }
-    if (lastRecruiterEncounter && time - lastRecruiterEncounter.startedAt >= RECRUITER_LIFETIME_MS) lastRecruiterEncounter = null;
+    if (lastRecruiterEncounter && time - lastRecruiterEncounter.startedAt >= RECRUITER_LIFETIME_MS) { lastRecruiterEncounter = null; recruiterFastUntil = 0; }
     if (time - recruiterProgress.updatedAt >= RECRUITER_PROGRESS_MS) recruiterProgress = { hits: 0, lastAt: -Infinity, updatedAt: time };
   }
   const localSnapshot = () => {
@@ -84,6 +97,26 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
       }
     }
     const snapshot = { ...localSnapshot(), recruiterBump };
+    onVisitors(snapshot); return snapshot;
+  }
+  function localRecruiterAttack(type) {
+    const time = Date.now(); cleanRecruiter(time);
+    const recruiterAttack = { type, started: false };
+    if (!localAllowed) recruiterAttack.reason = 'unavailable';
+    else if (!['punch', 'kick'].includes(type)) recruiterAttack.reason = 'invalid-attack';
+    else if (currentSeat || state.seatedJobId) recruiterAttack.reason = 'seated';
+    else if (Math.hypot(state.x - recruiterHome.x, state.z - recruiterHome.z) > 1.7 + 1e-9) recruiterAttack.reason = 'too-far';
+    else if (localRecruiterEncounter || lastRecruiterEncounter) recruiterAttack.reason = 'busy';
+    else if (time < recruiterResetUntil) recruiterAttack.reason = 'cooldown';
+    else {
+      const encounterId = `${id}:${time}`;
+      localRecruiterEncounter = { id: encounterId, ownerId: id, startedAt: time, updatedAt: time, initialAttack: type,
+        combat: { encounterId, phase: 'provoking', elapsed: 0, x: recruiterHome.x, z: recruiterHome.z, rotation: 0,
+          playerHealth: 100, recruiterHealth: 100, playerAttack: null, recruiterAttack: null, hitSeq: 0, outcome: null,
+          slamReady: false, slamReadyAt: time, slamHits: 0 } };
+      recruiterAttack.started = true; recruiterProgress = { hits: 0, lastAt: time, updatedAt: time };
+    }
+    const snapshot = { ...localSnapshot(), recruiterAttack };
     onVisitors(snapshot); return snapshot;
   }
   function updateLocalRecruiter() {
@@ -125,7 +158,12 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
     if (destroyed) return;
     live = true; joined = true; retryAt = 0; localAllowed = true;
     lastSeats = { ...snapshot.seats };
-    lastRecruiterEncounter = snapshot.recruiterEncounter ? structuredClone(snapshot.recruiterEncounter) : null;
+    const nextEncounter = snapshot.recruiterEncounter ? structuredClone(snapshot.recruiterEncounter) : null;
+    if (nextEncounter && nextEncounter.id !== lastRecruiterEncounter?.id) {
+      const age = Number.isFinite(snapshot.serverTime) && Number.isFinite(nextEncounter.startedAt) ? Math.max(0, snapshot.serverTime - nextEncounter.startedAt) : 0;
+      recruiterFastUntil = Date.now() + Math.max(0, RECRUITER_LIFETIME_MS - age);
+    } else if (!nextEncounter) recruiterFastUntil = 0;
+    lastRecruiterEncounter = nextEncounter;
     localRecruiterEncounter = null;
     Object.assign(botDefeats, snapshot.botDefeats || {});
     setStatus('shared', 'Live visitors connected');
@@ -152,7 +190,12 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
   async function tick() {
     if (destroyed || inFlight || Date.now() < retryAt) return;
     const elapsed = Date.now() - lastSent;
-    if ((!dirty || elapsed < 250) && elapsed < 1000 && joined) return;
+    // Even a stationary observer needs the short fall, recovery and throw
+    // snapshots. Limit the faster cadence to the shared encounter lifetime;
+    // ordinary movement and idle presence keep their existing intervals.
+    const encounterActive = lastRecruiterEncounter && Date.now() < recruiterFastUntil;
+    const interval = encounterActive ? 125 : dirty ? 250 : 1000;
+    if (elapsed < interval && joined) return;
     inFlight = true; dirty = false; lastSent = Date.now();
     try { await queueMutation(() => post(joined ? 'move' : 'join')); }
     catch (error) { disconnect(error); }
@@ -186,6 +229,22 @@ export function createPresence({ name, onVisitors = () => {}, onStatus = () => {
           const result = snapshot.recruiterBump;
           if (!result || result.required !== RECRUITER_REQUIRED_HITS || !Number.isInteger(result.hits) || result.hits < 0 || result.hits > RECRUITER_REQUIRED_HITS || typeof result.started !== 'boolean'
             || (result.started && (result.hits !== RECRUITER_REQUIRED_HITS || snapshot.recruiterEncounter?.ownerId !== id))) return unavailable('unavailable');
+          return snapshot;
+        } catch (error) { disconnect(error); return unavailable('unavailable'); }
+      });
+    },
+    startRecruiterAttack(type) {
+      return queueMutation(async () => {
+        const unavailable = reason => ({ ...localSnapshot(), recruiterAttack: { type, started: false, reason } });
+        if (destroyed) return unavailable('unavailable');
+        if (!['punch', 'kick'].includes(type)) return unavailable('invalid-attack');
+        if (!live && retryAt > Date.now()) return localRecruiterAttack(type);
+        try {
+          const snapshot = await post('recruiter-attack', { type });
+          if (destroyed) return unavailable('unavailable');
+          const result = snapshot.recruiterAttack;
+          if (!result || result.type !== type || typeof result.started !== 'boolean'
+            || (result.started && (snapshot.recruiterEncounter?.ownerId !== id || snapshot.recruiterEncounter.initialAttack !== type))) return unavailable('unavailable');
           return snapshot;
         } catch (error) { disconnect(error); return unavailable('unavailable'); }
       });

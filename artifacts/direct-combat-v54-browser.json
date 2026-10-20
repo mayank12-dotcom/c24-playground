@@ -1,0 +1,739 @@
+{
+  "ok": true,
+  "checks": [
+    "all 19 ambient bots remain and nearby controls appear without bumping",
+    "J starts a punch through the actual recruiter-attack HTTP API",
+    "opening contact causes a real fall and grounded state",
+    "K delivers an actual damaging contact during the grounded recovery sequence",
+    "J delivers the third damaging contact after the recruiter stands up",
+    "actual keyboard walking leads the recruiter into a clear shared aisle",
+    "three connected normal hits unlock the standing slam",
+    "L starts the real lift-and-drop slam after three connected hits",
+    "actual Chromium WebGL frame and combat controls are captured",
+    "the collision-checked slam finishes in a grounded pose"
+  ],
+  "failure": null,
+  "errors": [],
+  "externalRequests": [],
+  "api": [
+    {
+      "action": "join",
+      "type": null,
+      "status": 200,
+      "phase": null,
+      "at": 0
+    },
+    {
+      "action": "recruiter-attack",
+      "type": "punch",
+      "status": 200,
+      "phase": null,
+      "at": 50
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "provoking",
+      "at": 250
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "falling",
+      "at": 400
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "falling",
+      "at": 550
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "falling",
+      "at": 750
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "falling",
+      "at": 950
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "grounded",
+      "at": 1050
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "grounded",
+      "at": 1250
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "grounded",
+      "at": 1400
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 1550
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 1750
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 1950
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 2100
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 2250
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "recovering",
+      "at": 2400
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 2600
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 2750
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 2950
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 3100
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 3400
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 3650
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 3850
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 4050
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 4200
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 4350
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 4600
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 4850
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 5100
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 5200
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 5600
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "fighting",
+      "at": 5800
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6000
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6200
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6300
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6450
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6650
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6850
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 6950
+    },
+    {
+      "action": "move",
+      "type": null,
+      "status": 200,
+      "phase": "slamming",
+      "at": 7150
+    }
+  ],
+  "samples": [
+    {
+      "at": 50,
+      "stage": "nearby",
+      "health": 100,
+      "slamHits": 0,
+      "slamReady": false
+    },
+    {
+      "at": 100,
+      "stage": "provoking",
+      "health": 100,
+      "slamHits": 0,
+      "slamReady": false
+    },
+    {
+      "at": 350,
+      "stage": "falling",
+      "health": 80,
+      "slamHits": 1,
+      "slamReady": false
+    },
+    {
+      "at": 1000,
+      "stage": "grounded",
+      "health": 80,
+      "slamHits": 1,
+      "slamReady": false
+    },
+    {
+      "at": 1450,
+      "stage": "recovering",
+      "health": 80,
+      "slamHits": 1,
+      "slamReady": false
+    },
+    {
+      "at": 1500,
+      "stage": "recovering",
+      "health": 50,
+      "slamHits": 2,
+      "slamReady": false
+    },
+    {
+      "at": 2400,
+      "stage": "approaching",
+      "health": 50,
+      "slamHits": 2,
+      "slamReady": false
+    },
+    {
+      "at": 2450,
+      "stage": "fighting",
+      "health": 50,
+      "slamHits": 2,
+      "slamReady": false
+    },
+    {
+      "at": 2750,
+      "stage": "fighting",
+      "health": 30,
+      "slamHits": 3,
+      "slamReady": false
+    },
+    {
+      "at": 3600,
+      "stage": "fighting",
+      "health": 30,
+      "slamHits": 3,
+      "slamReady": true
+    },
+    {
+      "at": 5900,
+      "stage": "slamming",
+      "health": 0,
+      "slamHits": 0,
+      "slamReady": false
+    },
+    {
+      "at": 7300,
+      "stage": "grounded",
+      "health": 0,
+      "slamHits": 0,
+      "slamReady": false
+    }
+  ],
+  "placements": [
+    {
+      "x": -10.8,
+      "z": -19.720000000000002,
+      "rotation": 3.141592653589793,
+      "at": 350
+    },
+    {
+      "x": -14.2,
+      "z": -19.270000000000003,
+      "rotation": 0,
+      "at": 1000
+    },
+    {
+      "x": -14.2,
+      "z": -19.270000000000003,
+      "rotation": 0,
+      "at": 2400
+    },
+    {
+      "x": -14.2,
+      "z": -21.210625000000014,
+      "rotation": 0,
+      "at": 5100
+    },
+    {
+      "x": -14.2,
+      "z": -21.182500000000022,
+      "rotation": 0,
+      "at": 5150
+    }
+  ],
+  "slamTransition": {
+    "rightArmDelta": 0,
+    "rightForearmDelta": 0
+  },
+  "latest": {
+    "player": {
+      "x": -14.2,
+      "z": -21.182500000000022,
+      "hair": 5,
+      "rotation": 0,
+      "seated": false,
+      "seatedJobId": null,
+      "recruiterCombat": {
+        "phase": "grounded",
+        "elapsed": 0,
+        "x": -13.049999999999999,
+        "z": -20.26250000000002,
+        "rotation": 3.141592653589793,
+        "playerHealth": 86,
+        "recruiterHealth": 0,
+        "playerAttack": null,
+        "recruiterAttack": null,
+        "hitSeq": 5,
+        "outcome": "player",
+        "slamReady": false,
+        "slamReadyAt": 1792515244341,
+        "slamHits": 0,
+        "slamLanding": {
+          "x": -13.049999999999999,
+          "z": -20.26250000000002
+        },
+        "slamOrigin": {
+          "x": -14.2,
+          "z": -20.26250000000002
+        },
+        "chairOffset": -0.45,
+        "sitProgress": null,
+        "encounterId": "67cb2562-920a-43aa-b835-2c74ff3e27cb:1792515230491"
+      },
+      "combatAction": null
+    },
+    "ui": {
+      "encounterId": "67cb2562-920a-43aa-b835-2c74ff3e27cb:1792515230491",
+      "stage": "grounded",
+      "hits": 0,
+      "required": 0,
+      "localPlayer": true,
+      "playerHealth": 86,
+      "recruiterHealth": 0,
+      "slamReady": false,
+      "slamReadyAt": 1792515244341,
+      "slamHits": 0,
+      "now": 1792515237500
+    },
+    "combat": {
+      "phase": "grounded",
+      "elapsed": 0,
+      "x": -13.049999999999999,
+      "z": -20.26250000000002,
+      "rotation": 3.141592653589793,
+      "playerHealth": 86,
+      "recruiterHealth": 0,
+      "playerAttack": null,
+      "recruiterAttack": null,
+      "hitSeq": 5,
+      "outcome": "player",
+      "slamReady": false,
+      "slamReadyAt": 1792515244341,
+      "slamHits": 0,
+      "slamLanding": {
+        "x": -13.049999999999999,
+        "z": -20.26250000000002
+      },
+      "slamOrigin": {
+        "x": -14.2,
+        "z": -20.26250000000002
+      },
+      "chairOffset": -0.45,
+      "sitProgress": null
+    },
+    "visual": {
+      "rightArmX": -1.05,
+      "rightForearmX": -1.25,
+      "recruiterY": 0
+    },
+    "home": {
+      "x": -13,
+      "z": -18.12,
+      "rotation": 0
+    },
+    "landing": {
+      "x": -14.2,
+      "z": -18.35,
+      "side": 1
+    },
+    "bots": 19,
+    "botIds": [
+      "bot-0",
+      "bot-1",
+      "bot-2",
+      "bot-3",
+      "bot-4",
+      "bot-5",
+      "bot-6",
+      "bot-7",
+      "bot-8",
+      "bot-9",
+      "bot-10",
+      "bot-11",
+      "bot-12",
+      "bot-13",
+      "bot-14",
+      "social-0",
+      "social-1",
+      "social-2",
+      "social-3"
+    ],
+    "chairOffset": -0.45,
+    "bodies": [
+      {
+        "id": "recruiter:product-designer",
+        "x": 0,
+        "z": -4.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:frontend-engineer",
+        "x": -13,
+        "z": -4.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:brand-designer",
+        "x": 13,
+        "z": -4.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:product-manager",
+        "x": -13.049999999999999,
+        "z": -20.26250000000002,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:creative-developer",
+        "x": 0,
+        "z": -18.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:community-lead",
+        "x": 13,
+        "z": -18.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:data-analyst",
+        "x": -13,
+        "z": -32.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:content-strategist",
+        "x": 0,
+        "z": -32.12,
+        "radius": 0.4
+      },
+      {
+        "id": "recruiter:design-intern",
+        "x": 13,
+        "z": -32.12,
+        "radius": 0.4
+      },
+      {
+        "id": "pm-body:0",
+        "x": -12.6,
+        "z": -20.30250000000002,
+        "radius": 0.43
+      },
+      {
+        "id": "pm-body:1",
+        "x": -12.1,
+        "z": -20.30250000000002,
+        "radius": 0.43
+      },
+      {
+        "id": "pm-body:2",
+        "x": -13.329999999999998,
+        "z": -20.35250000000002,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-0",
+        "x": 13,
+        "z": -1.5,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-1",
+        "x": 13,
+        "z": -15.5,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-2",
+        "x": 13,
+        "z": -29.5,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-3",
+        "x": -7.1,
+        "z": 9,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-4",
+        "x": -2.5,
+        "z": 9,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-5",
+        "x": 17.129976905809507,
+        "z": 6.45,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-6",
+        "x": 16.870023094190493,
+        "z": 11.55,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-7",
+        "x": -7.699999999999999,
+        "z": 10.9,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-8",
+        "x": -5,
+        "z": 11.7,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-9",
+        "x": -1.5999999999999996,
+        "z": 10.9,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-10",
+        "x": 6.5,
+        "z": -34.869374297836636,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-11",
+        "x": -16.997549702837,
+        "z": 6.45,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-12",
+        "x": -17.002450297163005,
+        "z": 11.55,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-13",
+        "x": 6.5,
+        "z": -20.052896689651423,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:bot-14",
+        "x": -6.5,
+        "z": -13.947103446647565,
+        "radius": 0.4
+      },
+      {
+        "id": "bot:social-0",
+        "x": -29.78,
+        "z": -20.36,
+        "radius": 0.52
+      },
+      {
+        "id": "bot:social-1",
+        "x": -28.22,
+        "z": -20.36,
+        "radius": 0.52
+      },
+      {
+        "id": "bot:social-2",
+        "x": 28.22,
+        "z": -34.36,
+        "radius": 0.52
+      },
+      {
+        "id": "bot:social-3",
+        "x": 29.78,
+        "z": -34.36,
+        "radius": 0.52
+      },
+      {
+        "id": "fight-next:bot-3:0",
+        "x": -7.1,
+        "z": 9,
+        "radius": 0.4
+      },
+      {
+        "id": "fight-next:bot-4:0",
+        "x": -2.5,
+        "z": 9,
+        "radius": 0.4
+      }
+    ]
+  },
+  "screenshot": "/tmp/common-ground-v54-recruiter-browser-3/combat.png",
+  "scope": "Instrumented temporary esbuild bundle of actual src/main.js and src/world.js; actual Chromium DOM/WebGL and real local /api/world with an isolated memory store. Test-only clear-position fixtures, synchronized 50ms clock/RAF and gated GPU draws. All 19 ambient bots remain. This does not verify public Vercel access, real-time wall-clock performance or production Redis."
+}

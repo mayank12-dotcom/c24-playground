@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { STATION_POSITIONS, BOT_SEATED_JOB_INDICES, getBots, getSocialBots, getBotOccupiedJobs } from './crowd.js';
 import { createCharacterFactory } from './character.js';
-import { animateCharacter, SEATED_HIP_HEIGHT, SEATED_FOOT_REACH } from './character-motion.js';
+import { animateCharacter, resetCharacterPose, SEATED_HIP_HEIGHT, SEATED_FOOT_REACH } from './character-motion.js';
 import { createThirdPersonController } from './third-person.js';
 import { getSeatArrival } from './seat-arrival.js';
 import { createCozySpace } from './cozy-space.js';
@@ -26,7 +26,7 @@ import { createCharacterEmotion } from './character-emotion.js';
 import { createFightImpactTracker, getFightSource } from './fight-impacts.js';
 import { createOfficeMaterial } from './render-materials.js';
 import { normalizeVisitorName } from './visitor-profile.js';
-import { PM_RECRUITER_JOB_ID, PM_REQUIRED_BUMPS, PM_FALL_MS, PM_GROUND_MS, PM_RECOVER_MS, PM_ATTACK_MS, createRecruiterBumpGate, createRecruiterDuel } from './recruiter-combat.js';
+import { PM_RECRUITER_JOB_ID, PM_FALL_MS, PM_RECOVER_MS, PM_ATTACK_MS, PM_SLAM_MS, createRecruiterDuel } from './recruiter-combat.js';
 
 const DESK_LABEL_DISTANCE = 3;
 // Begin the transfer before a walking hand enters the chair's turning lane.
@@ -40,7 +40,7 @@ export function setVisitorNameLabel(label, name, { local = false } = {}) {
 }
 
 /** Procedural scene geometry; the application owns playback for local footfalls. */
-export function createWorld({ container, jobs = [], playerName, onNear = () => {}, onBotNear = () => {}, onSelect = () => {}, onMove = () => {}, onNavigateIntent = () => {}, onSeatRequest, onSeat = () => {}, onSeatReady = () => {}, onInfoSelect = () => {}, onStandUpStart = () => {}, onStandUp = () => {}, onFootstep = () => {}, onFightFrame = () => {}, onRecruiterBump, onRecruiterFightChange = () => {}, onRecruiterFightFrame = () => {} }) {
+export function createWorld({ container, jobs = [], playerName, onNear = () => {}, onBotNear = () => {}, onSelect = () => {}, onMove = () => {}, onNavigateIntent = () => {}, onSeatRequest, onSeat = () => {}, onSeatReady = () => {}, onInfoSelect = () => {}, onStandUpStart = () => {}, onStandUp = () => {}, onFootstep = () => {}, onFightFrame = () => {}, onRecruiterAttack, onRecruiterFightChange = () => {}, onRecruiterFightFrame = () => {} }) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#d6d2ca');
   scene.fog = new THREE.Fog('#d6d2ca', 70, 150);
@@ -222,7 +222,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   // Stable records make a sustained body contact one bump rather than a new
   // impact every animation frame. Only resolved, visible positions are solid.
   function getCharacterObstacles(ignoreId=null) {
-    return [...recruiterBodies,...[...botCharacters.values(),...visitors.values()].filter(actor=>actor.placed).flatMap(actor=>[actor.body,...(actor.fightVolumes||[])]),...fightProposals,...pushReservations()]
+    return [...recruiterBodies,...pmVolumes,...[...botCharacters.values(),...visitors.values()].filter(actor=>actor.placed).flatMap(actor=>[actor.body,...(actor.fightVolumes||[])]),...fightProposals,...pushReservations()]
       .filter(body=>body.id!==ignoreId&&body.ownerId!==ignoreId&&!(ignoreId===null&&body.seatId===seated));
   }
   function updateFightFootprint(actor,pose) {
@@ -576,14 +576,13 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   // The Product Manager has one shared, playable encounter. Its owner advances
   // the duel; other visitors display the server's latest combat snapshot.
   let pmEncounter=null,pmCombat=null,pmDuel=null,pmLocalId='local-player';
-  let pmBumpHits=0,pmBumpBusy=false,pmRequestGeneration=0,pmLastBumpPoint=null;
+  let pmAttackBusy=false,pmRequestGeneration=0,pmVolumes=[];
   let pmLastPublished=-Infinity,pmLastUi='',pmLastObservedHit=null,pmImpacts=[];
   let pmRoute=[],pmRouteGoal=null,pmLanding=null,pmPushSide=1,pmAttached=false,pmReturnEntry=null,pmRestoring=false;
   let pmChairOffset=0,pmRestoreElapsed=0,pmWaitingMessage=null;
   const pmChair=pmStation?.group.children.find(child=>child.name==='upholstered-job-chair'&&child.position.z<0);
   const pmChairRaw=furnitureBounds.find(bound=>bound.id===pmChairId),pmChairRoute=routeBounds.find(bound=>bound.id===pmChairId);
   const pmChairStartZ=pmChairRaw?.z??0;
-  const pmBumpGate=createRecruiterBumpGate();
   const pmHome=pmStation?{x:pmStation.position.x,z:pmStation.position.z-1.12,rotation:0}:null;
   let pmOwnedStation=pmStation?{job:{id:'recruiter-product-manager'},seat:new THREE.Vector3(pmHome.x,0,pmHome.z),rotation:0,colliderId:pmChairId,stationIndex:pmStation.stationIndex}:null;
   const pmGhost=pmStation?person({hair:5,tie:true}):null;
@@ -592,7 +591,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   pmSpeech.style.cssText='position:absolute;transform:translate(-50%,-100%);padding:7px 11px;background:#fffef9;border:1.2px solid #a65951;border-radius:11px;font:600 12px sans-serif;color:#a65951;pointer-events:none';overlay.append(pmSpeech);
   const pmPoint=new THREE.Vector3(),pmBox=new THREE.Box3(),pmMatrix=new THREE.Matrix4(),pmWorldMatrix=new THREE.Matrix4();
   let pmSolids=null,pmChairSolids=[];
-  function pmOwnFightActive(){return !seated&&!seatEntry&&!seatExit&&!!pmEncounter&&pmEncounter.ownerId===pmLocalId&&!!pmCombat&&['approaching','fighting'].includes(pmCombat.phase);}
+  function pmOwnFightActive(){return !seated&&!seatEntry&&!seatExit&&!!pmEncounter&&pmEncounter.ownerId===pmLocalId&&!!pmCombat&&['provoking','falling','grounded','recovering','approaching','fighting','slamming'].includes(pmCombat.phase);}
   function pmOtherBodies(){return [...getCharacterObstacles(`recruiter:${PM_RECRUITER_JOB_ID}`),{...localBody,x:player.position.x,z:player.position.z}];}
   function pmStaticSolids(){
     if(pmSolids)return pmSolids;
@@ -606,7 +605,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
         pmWorldMatrix.copy(node.matrixWorld);
         if(node.isInstancedMesh){node.getMatrixAt(index,pmMatrix);pmWorldMatrix.multiply(pmMatrix);}
         pmBox.copy(geometry.boundingBox).applyMatrix4(pmWorldMatrix);
-        if(pmBox.max.y<.09||pmBox.min.y>2.5||pmBox.max.x<pmHome.x-5||pmBox.min.x>pmHome.x+5||pmBox.max.z<pmHome.z-5||pmBox.min.z>pmHome.z+5)continue;
+        if(pmBox.max.y<.09||pmBox.min.y>3.5||pmBox.max.x<pmHome.x-15||pmBox.min.x>pmHome.x+15||pmBox.max.z<pmHome.z-15||pmBox.min.z>pmHome.z+15)continue;
         let ownChair=false;for(let parent=node;parent;parent=parent.parent)if(parent===pmChair)ownChair=true;
         if(ownChair){const original=pmBox.clone();original.min.z-=pmChairOffset;original.max.z-=pmChairOffset;pmChairSolids.push(original);}else pmSolids.push(pmBox.clone());
       }
@@ -629,12 +628,13 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   function pmVisualRotation(state){return state.rotation;}
   function pmPoseOptions(state){
     if(!state)return {seated:true};
+    if(state.phase==='slamming')return {fallProgress:pmEase((state.elapsed/PM_SLAM_MS-.20)/.70),recoveryProgress:0,pushSide:pmSlamSide(state)};
     const falling=state.phase==='falling',grounded=state.phase==='grounded',recovering=state.phase==='recovering';
     const progress=falling?Math.min(1,state.elapsed/PM_FALL_MS):1;
     if(falling&&progress<=.25)return {seated:true};
-    if(falling||grounded||recovering)return {fallProgress:falling?(progress-.25)/.75:1,recoveryProgress:recovering?Math.min(1,state.elapsed/PM_RECOVER_MS):0,pushSide:Math.sign(pmHome.x-state.x)||pmPushSide};
+    if(falling||grounded||recovering)return {fallProgress:falling?(progress-.25)/.75:1,recoveryProgress:recovering?Math.min(1,state.elapsed/PM_RECOVER_MS):0,pushSide:state.slamOrigin?pmSlamSide(state):Math.sign(pmHome.x-state.x)||pmPushSide};
     const lower=state.sitProgress;
-    return {seated:state.phase==='seated'||lower===1,sitProgress:Number.isFinite(lower)?lower:null,seatSlide:Number.isFinite(lower)?SEATED_FOOT_REACH*(1-lower):null,fight:['approaching','fighting'].includes(state.phase)?recruiterFightPose(state,Date.now()+serverTimeOffset):null};
+    return {seated:state.phase==='seated'||state.phase==='provoking'||lower===1,sitProgress:Number.isFinite(lower)?lower:null,seatSlide:Number.isFinite(lower)?SEATED_FOOT_REACH*(1-lower):null,fight:['approaching','fighting'].includes(state.phase)?recruiterFightPose(state,Date.now()+serverTimeOffset):null};
   }
   function pmChairCanMove(offset){
     const steps=Math.max(1,Math.ceil(Math.abs(offset-pmChairOffset)/.025));
@@ -647,14 +647,24 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   }
   function pmSkinClear(state,{people=true}={}){
     if(!pmGhost||!state)return false;
-    pmGhost.position.set(state.x,0,state.z);pmGhost.rotation.y=pmVisualRotation(state);
-    animateCharacter(pmGhost,{dt:0,time:(Date.now()+serverTimeOffset)/1000,...pmPoseOptions(state)});pmGhost.updateMatrixWorld(true);
-    pmStaticSolids();const offset=state.chairOffset??pmChairOffset;const solids=[...pmSolids,...pmChairSolids.map(box=>{const shifted=box.clone();shifted.min.z+=offset;shifted.max.z+=offset;return shifted;})];
+    pmGhost.position.set(state.x,pmSlamHeight(state),state.z);pmGhost.rotation.y=pmVisualRotation(state);
+    animatePmPose(pmGhost,state,{dt:0,time:(Date.now()+serverTimeOffset)/1000});pmGhost.updateMatrixWorld(true);
+    pmStaticSolids();const offset=state.chairOffset??pmChairOffset;const solids=[...pmSolids,...pmChairSolids.map(box=>{const shifted=box.clone();shifted.min.z+=offset;shifted.max.z+=offset;return shifted;})].filter(box=>box.max.x>state.x-2&&box.min.x<state.x+2&&box.max.z>state.z-2&&box.min.z<state.z+2);
     const mesh=pmGhost.userData.mesh,bodies=people?pmOtherBodies():[];
     for(let index=0;index<mesh.geometry.attributes.position.count;index++){
       mesh.getVertexPosition(index,pmPoint);mesh.localToWorld(pmPoint);
       for(const box of solids)if(pmPoint.x>box.min.x+.004&&pmPoint.x<box.max.x-.004&&pmPoint.y>box.min.y+.004&&pmPoint.y<box.max.y-.004&&pmPoint.z>box.min.z+.004&&pmPoint.z<box.max.z-.004)return false;
-      for(const body of bodies)if(pmPoint.y<2.1&&Math.hypot(pmPoint.x-body.x,pmPoint.z-body.z)<Math.max(.1,(body.radius??CHARACTER_RADIUS)-.035))return false;
+      for(const body of bodies){
+        const owner=pmEncounter&&(body.id===`visitor:${pmEncounter.ownerId}`||(body.id==='local-player'&&pmEncounter.ownerId===pmLocalId));
+        // Grappling permits hand and forearm contact between the two fighters.
+        // Heads, torsos, feet, root sweeps and every bystander remain solid.
+        if(owner&&state.phase==='slamming'){
+          const ids=mesh.geometry.attributes.skinIndex.array,weights=mesh.geometry.attributes.skinWeight.array;let gripWeight=0;
+          for(let component=0;component<4;component++)if([4,5,7,8].includes(ids[index*4+component]))gripWeight+=weights[index*4+component];
+          if(gripWeight>.8)continue;
+        }
+        if(pmPoint.y<2.1&&Math.hypot(pmPoint.x-body.x,pmPoint.z-body.z)<Math.max(.1,(body.radius??CHARACTER_RADIUS)-.035))return false;
+      }
     }
     return true;
   }
@@ -671,8 +681,132 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
     }
     return null;
   }
+  function pmDownPose(state){
+    const pose=pmPoseOptions(state);
+    return {fall:pose.fallProgress??0,recovery:pose.recoveryProgress??0,side:pose.pushSide??1};
+  }
+  function pmBodyVolumes(state){
+    const pose=pmDownPose(state);
+    return getFightBodyVolumes({x:0,z:0,rotation:0,fightRole:'fighter',fightPose:{fallProgress:pose.fall,recoverProgress:pose.recovery}}).slice(1).map(v=>({x:state.x+Math.cos(state.rotation)*v.x*pose.side+Math.sin(state.rotation)*v.z,z:state.z-Math.sin(state.rotation)*v.x*pose.side+Math.cos(state.rotation)*v.z,radius:v.radius}));
+  }
+  function pmSlamHeight(state){
+    if(state?.phase!=='slamming')return 0;
+    const p=Math.min(1,state.elapsed/PM_SLAM_MS);
+    return .52*pmEase(p/.30)*(1-pmEase((p-.58)/.35));
+  }
+  function pmSlamPoint(progress,state){
+    const from=state.slamOrigin??state,to=state.slamLanding??from,t=pmEase((progress-.30)/.60);
+    return {x:from.x+(to.x-from.x)*t,z:from.z+(to.z-from.z)*t,rotation:state.rotation};
+  }
+  function pmSlamSide(state){
+    const from=state.slamOrigin,to=state.slamLanding;if(!from||!to)return 1;
+    return (to.x-from.x)*Math.cos(state.rotation)-(to.z-from.z)*Math.sin(state.rotation)>=0?-1:1;
+  }
+  let pmStandingBones=null;const pmSlamQuaternion=new THREE.Quaternion();
+  function animatePmPose(character,state,options){
+    character.position.y=pmSlamHeight(state);
+    if(state?.phase!=='slamming'){animateCharacter(character,{...options,...pmPoseOptions(state)});return;}
+    if(!pmStandingBones){resetCharacterPose(pmGhost);animateCharacter(pmGhost,{dt:0,fight:{guard:1}});pmStandingBones=pmGhost.userData.rig.bones.map(bone=>({position:bone.position.clone(),quaternion:bone.quaternion.clone()}));}
+    const progress=Math.min(1,state.elapsed/PM_SLAM_MS),fall=pmEase((progress-.20)/.70);
+    animateCharacter(character,{...options,fallProgress:fall,recoveryProgress:0,pushSide:pmSlamSide(state)});
+    const blend=pmEase((progress-.14)/.24);
+    if(blend<1)character.userData.rig.bones.forEach((bone,index)=>{const base=pmStandingBones[index];bone.position.lerpVectors(base.position,bone.position,blend);pmSlamQuaternion.copy(bone.quaternion);bone.quaternion.slerpQuaternions(base.quaternion,pmSlamQuaternion,blend);});
+    character.updateMatrixWorld(true);character.userData.rig.skeleton.update();
+  }
+  function pmSlamStepClear(state){
+    const previous=pmCombat??state;
+    if(moveWithCharacters(previous,state,routeBounds,pmOtherBodies()).blocked||!pmSkinClear(state)){pmWaitingMessage='A little more room for the landing.';return false;}
+    return true;
+  }
+  function choosePmSlam(){
+    if(!pmCombat||!['approaching','fighting'].includes(pmCombat.phase)||!pmCombat.slamReady)return null;
+    for(const side of [1,-1])for(const distance of [1.15,1.45]){
+      const to={x:pmCombat.x+Math.cos(pmCombat.rotation)*side*distance,z:pmCombat.z-Math.sin(pmCombat.rotation)*side*distance};
+      let clear=true,from={x:pmCombat.x,z:pmCombat.z};
+      for(let i=0;i<=24;i++){
+        const state={...pmCombat,phase:'slamming',elapsed:i/24*PM_SLAM_MS,slamOrigin:{x:pmCombat.x,z:pmCombat.z},slamLanding:to};Object.assign(state,pmSlamPoint(i/24,state));
+        if(moveWithCharacters(from,state,routeBounds,pmOtherBodies()).blocked||!pmSkinClear(state)){clear=false;break;}from=state;
+      }
+      if(clear)return to;
+    }
+    return null;
+  }
+  function pmGroundedAttack(){
+    if(!pmCombat||!['falling','grounded','recovering'].includes(pmCombat.phase))return 0;
+    const down=pmDownPose(pmCombat);return pmEase(down.fall)*(1-pmEase(down.recovery));
+  }
+  function pmGroundPunch(now,remote=false){
+    const attack=pmCombat?.playerAttack;if((!remote&&!pmOwnFightActive())||attack?.type!=='punch')return 0;
+    return pmGroundedAttack()*Math.sin(Math.PI*Math.max(0,Math.min(1,(now-attack.startedAt)/PM_ATTACK_MS.punch)))**2;
+  }
+  function solvePmSupportLeg(motion,foot){
+    const rig=motion.rig,thigh=rig.dimensions.thighLength,shin=Math.hypot(rig.dimensions.shinLength,.01),clamp=THREE.MathUtils.clamp;
+    foot.upper.getWorldPosition(motion.hip);foot.upper.parent.getWorldQuaternion(motion.parentQuaternion);motion.parentInverse.copy(motion.parentQuaternion).invert();
+    motion.target.copy(foot.target).sub(motion.hip).applyQuaternion(motion.parentInverse);
+    const distance=clamp(motion.target.length(),.025,thigh+shin-.00015);motion.target.normalize();
+    motion.bend.copy(motion.forward).applyQuaternion(motion.parentInverse);motion.bend.addScaledVector(motion.target,-motion.bend.dot(motion.target)).normalize();if(motion.bend.lengthSq()<.5)motion.bend.set(0,0,1);
+    const hipAngle=Math.acos(clamp((thigh*thigh+distance*distance-shin*shin)/(2*thigh*distance),-1,1));
+    const knee=Math.PI-Math.acos(clamp((thigh*thigh+shin*shin-distance*distance)/(2*thigh*shin),-1,1));
+    motion.upperDirection.copy(motion.target).multiplyScalar(Math.cos(hipAngle)).addScaledVector(motion.bend,Math.sin(hipAngle));
+    motion.axisX.crossVectors(motion.bend,motion.target).normalize();motion.axisY.copy(motion.upperDirection).negate();motion.axisZ.crossVectors(motion.axisX,motion.axisY).normalize();motion.basis.makeBasis(motion.axisX,motion.axisY,motion.axisZ);
+    foot.upper.quaternion.setFromRotationMatrix(motion.basis);foot.lower.rotation.set(knee+Math.atan2(.01,rig.dimensions.shinLength),0,0);foot.lower.updateWorldMatrix(true,false);foot.lower.getWorldQuaternion(motion.quaternion);foot.ankle.quaternion.copy(motion.quaternion).invert().multiply(motion.rootQuaternion);
+  }
+  function applyPmPlayerGesture(character,now,remote=false){
+    const rig=character.userData.rig,motion=character.userData.motion;if(!rig||!motion||(!remote&&!pmOwnFightActive()))return;
+    const down=pmGroundPunch(now,remote),attack=pmCombat.playerAttack;
+    if(down>0){
+      rig.hips.position.z+=.12*down;rig.torso.rotation.x+=.9*down;
+      for(const side of ['left','right']){rig[`${side}Arm`].rotation.x=-1.05;rig[`${side}Forearm`].rotation.x=-1.25;}
+      const side=attack.seq%2?'right':'left',arm=rig[`${side}Arm`],forearm=rig[`${side}Forearm`],p=Math.max(0,Math.min(1,(now-attack.startedAt)/PM_ATTACK_MS.punch)),reach=pmEase((p-.12)/.32)*(1-pmEase((p-.56)/.36));arm.rotation.x=-1.05-.55*reach;forearm.rotation.x=-1.25+1.17*reach;arm.rotation.x+=(-1.75-arm.rotation.x)*down;forearm.rotation.x+=(-.12-forearm.rotation.x)*down;arm.rotation.z+=((side==='left'?.2:-.2)-arm.rotation.z)*down;
+      rig.hips.updateWorldMatrix(true,true);for(const foot of motion.feet)solvePmSupportLeg(motion,foot);
+    }
+    if(attack?.type==='kick'){
+      const p=Math.max(0,Math.min(1,(now-attack.startedAt)/PM_ATTACK_MS.kick)),amount=pmGroundedAttack()*Math.sin(p*Math.PI)**3;
+      if(amount>0){rig.hips.position.z+=.18*amount;motion.feet[1].target.addScaledVector(motion.forward,.14*amount);motion.feet[1].target.y-=.14*amount;rig.hips.updateWorldMatrix(true,true);for(const foot of motion.feet)solvePmSupportLeg(motion,foot);}
+    }
+    if(attack?.type==='slam'||pmCombat.phase==='slamming'){
+      const progress=pmCombat.phase==='slamming'?Math.min(1,pmCombat.elapsed/PM_SLAM_MS):Math.min(1,(now-attack.startedAt)/(PM_ATTACK_MS.slam*.5));
+      const grip=pmCombat.phase==='slamming'?1-pmEase((progress-.40)/.35):pmEase(progress/.5);
+      rig.rightArm.rotation.x+=(-1.55-rig.rightArm.rotation.x)*grip;rig.rightForearm.rotation.x+=(-.55-rig.rightForearm.rotation.x)*grip;rig.rightArm.rotation.z+=(-.12-rig.rightArm.rotation.z)*grip;rig.torso.rotation.x+=.12*grip;
+    }
+    character.updateMatrixWorld(true);rig.skeleton.update();
+  }
+  const pmContactPoint=new THREE.Vector3(),pmTargetVertex=new THREE.Vector3(),pmLimbVertices=new Map();
+  function pmActualPlayerContact(type,state){
+    if(type==='slam')return Math.hypot(state.x-player.position.x,state.z-player.position.z)<=1.1;
+    const rig=player.userData.rig,attack=state.playerAttack,part=type==='kick'?rig.rightFoot:rig[`${attack?.seq%2?'right':'left'}Hand`];
+    player.updateMatrixWorld(true);pmStation.recruiter.updateMatrixWorld(true);
+    const attacker=player.userData.mesh,target=pmStation.recruiter.userData.mesh,boneIndex=rig.bones.indexOf(part);
+    if(!pmLimbVertices.has(boneIndex)){
+      const ids=attacker.geometry.attributes.skinIndex,weights=attacker.geometry.attributes.skinWeight,selected=[];
+      for(let i=0;i<ids.count;i++)for(let component=0;component<4;component++)if(ids.array[i*4+component]===boneIndex&&weights.array[i*4+component]>.35){selected.push(i);break;}
+      pmLimbVertices.set(boneIndex,selected);
+    }
+    // Test the actual mitten/toe surface. The ankle joint can sit behind the
+    // shoe's toe, especially when a low kick reaches a grounded opponent.
+    const cell=.06,buckets=new Map(),key=(x,y,z)=>`${x},${y},${z}`;
+    for(let i=0;i<target.geometry.attributes.position.count;i++){
+      target.getVertexPosition(i,pmTargetVertex);target.localToWorld(pmTargetVertex);
+      const id=key(Math.floor(pmTargetVertex.x/cell),Math.floor(pmTargetVertex.y/cell),Math.floor(pmTargetVertex.z/cell));
+      if(!buckets.has(id))buckets.set(id,[]);buckets.get(id).push(pmTargetVertex.clone());
+    }
+    for(const index of pmLimbVertices.get(boneIndex)){
+      attacker.getVertexPosition(index,pmContactPoint);attacker.localToWorld(pmContactPoint);
+      const x=Math.floor(pmContactPoint.x/cell),y=Math.floor(pmContactPoint.y/cell),z=Math.floor(pmContactPoint.z/cell);
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++)for(const point of buckets.get(key(x+dx,y+dy,z+dz))??[])if(pmContactPoint.distanceToSquared(point)<.055**2)return true;
+    }
+    return false;
+  }
+  let pmSlamCached=null,pmSlamCheckedAt=-Infinity,pmSlamCheckedPosition=null;
+  function pmSlamAvailable(){
+    if(!pmCombat?.slamReady||!['approaching','fighting'].includes(pmCombat.phase)||pmEncounter?.ownerId!==pmLocalId)return false;
+    const now=Date.now()+serverTimeOffset,moved=!pmSlamCheckedPosition||Math.hypot(pmCombat.x-pmSlamCheckedPosition.x,pmCombat.z-pmSlamCheckedPosition.z)>.3;
+    if((moved||!pmSlamCached)&&now-pmSlamCheckedAt>750){pmSlamCheckedAt=now;pmSlamCheckedPosition={x:pmCombat.x,z:pmCombat.z};pmSlamCached=choosePmSlam();}
+    return !!pmSlamCached;
+  }
+  function pmIsNearby(){return !!pmHome&&!seated&&!seatEntry&&!seatExit&&Math.hypot(player.position.x-pmHome.x,player.position.z-pmHome.z)<=1.18;}
   function getRecruiterFightState(){
-    return {encounterId:pmEncounter?.id??null,stage:pmCombat?.phase??(pmBumpHits?'progress':'idle'),hits:pmBumpHits,required:PM_REQUIRED_BUMPS,localPlayer:!pmEncounter||pmEncounter.ownerId===pmLocalId,playerHealth:pmCombat?.playerHealth??100,recruiterHealth:pmCombat?.recruiterHealth??100};
+    return {encounterId:pmEncounter?.id??null,stage:pmCombat?.phase??(pmAttackBusy?'provoking':!pmEncounter&&pmIsNearby()?'nearby':'idle'),hits:0,required:0,localPlayer:!pmEncounter||pmEncounter.ownerId===pmLocalId,playerHealth:pmCombat?.playerHealth??100,recruiterHealth:pmCombat?.recruiterHealth??100,slamReady:pmSlamAvailable(),slamReadyAt:pmCombat?.slamReadyAt??0,slamHits:pmCombat?.slamHits??0,now:Math.floor((Date.now()+serverTimeOffset)/250)*250};
   }
   function emitPmUi(message){const state={...getRecruiterFightState(),message:message??null};const key=JSON.stringify(state);if(key!==pmLastUi){pmLastUi=key;onRecruiterFightChange(state);}}
   function attachPmRecruiter(){if(pmStation&&!pmAttached){scene.attach(pmStation.recruiter);pmAttached=true;}}
@@ -693,10 +827,11 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
           if(!pmLanding&&pmCombat.phase==='falling'){const progress=pmCombat.elapsed/PM_FALL_MS,q=(progress-.25)/.75,t=pmEase(q);pmLanding=t>.00001?{x:pmHome.x+(pmCombat.x-pmHome.x)/t,z:pmHome.z-.23,side:Math.sign(pmHome.x-pmCombat.x)||1}:choosePmLanding();}
           pmLanding=pmLanding||{x:pmCombat.x,z:pmCombat.z,side:Math.sign(pmHome.x-pmCombat.x)||1};pmDuel=createRecruiterDuel({home:pmHome,landing:pmLanding,fallPosition:p=>pmFallPoint(p)});pmDuel.resume(pmEncounter,pmCombat,Date.now()+serverTimeOffset);}
         pmDuel.end();pmEncounter={...pmEncounter,ownerId:'departed-owner'};
-      }else{pmEncounter=null;pmCombat=null;pmDuel=null;pmReturnEntry=null;pmRestoring=false;pmBumpHits=0;pmLanding=null;pmLastBumpPoint=null;pmBumpGate.reset();resetPmRecruiter();}
+      }else{pmEncounter=null;pmCombat=null;pmDuel=null;pmReturnEntry=null;pmRestoring=false;pmLanding=null;pmVolumes=[];pmSlamCached=null;resetPmRecruiter();}
       emitPmUi();return;
     }
     if(next.id===pmEncounter?.id){
+      if(next.ownerId===pmLocalId&&!pmDuel&&next.combat?.phase!=='seated'){pmEncounter=null;setRecruiterEncounter(next,pmLocalId);return;}
       pmEncounter={...pmEncounter,...next};
       if(next.ownerId!==pmLocalId&&next.combat){
         if(pmLastObservedHit!==null&&next.combat.hitSeq>pmLastObservedHit&&Date.now()+serverTimeOffset-next.updatedAt<1200)pmImpacts.push({id:`${next.id}:observed:${next.combat.hitSeq}`,type:next.combat.playerAttack?.type??next.combat.recruiterAttack?.type??'punch'});
@@ -704,52 +839,38 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       }
       return;
     }
-    pmEncounter={...next};pmReturnEntry=null;pmRestoring=false;pmBumpHits=PM_REQUIRED_BUMPS;pmRoute=[];pmRouteGoal=null;pmLastPublished=-Infinity;pmLastObservedHit=next.combat?.hitSeq??null;
+    pmEncounter={...next};pmReturnEntry=null;pmRestoring=false;pmRoute=[];pmRouteGoal=null;pmLastPublished=-Infinity;pmLastObservedHit=next.combat?.hitSeq??null;
     attachPmRecruiter();
     if(next.ownerId===pmLocalId){
       pmLanding=pmLanding||choosePmLanding()||{x:pmHome.x-1.2,z:pmHome.z-.23,side:1};pmPushSide=pmLanding.side;
       pmDuel=createRecruiterDuel({home:pmHome,landing:pmLanding,fallPosition:p=>pmFallPoint(p)});
-      if(next.combat)pmDuel.resume(next,next.combat,Date.now()+serverTimeOffset);else pmDuel.start(next);pmCombat={...pmDuel.getState(),chairOffset:next.combat?.chairOffset??0};
+      if(next.combat){const resumed=pmDuel.resume(next,next.combat,Date.now()+serverTimeOffset);if(!resumed){if(next.combat.phase==='provoking'&&next.initialAttack)pmDuel.start(next,{initialAttack:next.initialAttack,now:Date.now()+serverTimeOffset});else{pmDuel=null;pmCombat={...next.combat};pmEncounter={...next,ownerId:'synchronizing-owner'};emitPmUi('Waiting for the encounter to synchronize.');return;}}if(next.combat.phase==='provoking'&&!next.combat.playerAttack&&next.initialAttack)pmDuel.attack(next.initialAttack,Date.now()+serverTimeOffset);}else pmDuel.start(next,{initialAttack:next.initialAttack,now:Date.now()+serverTimeOffset});pmCombat={...pmDuel.getState(),chairOffset:next.combat?.chairOffset??0};
       keys.clear();stopKeyboardMovement();clearSeatRequest({allowContact:true});waypoints=[];target.copy(playerPosition);destinationRing.visible=false;
-    }else{pmDuel=null;pmCombat=next.combat?{...next.combat}:{phase:'falling',elapsed:0,x:pmHome.x,z:pmHome.z,rotation:0,playerHealth:100,recruiterHealth:100,hitSeq:0};}
+    }else{pmDuel=null;pmCombat=next.combat?{...next.combat}:{phase:next.initialAttack?'provoking':'falling',elapsed:0,x:pmHome.x,z:pmHome.z,rotation:0,playerHealth:100,recruiterHealth:100,hitSeq:0};}
     emitPmUi();
   }
-  async function requestPmBump(contactKind,now){
-    pmBumpBusy=true;const generation=++pmRequestGeneration;
+  async function requestPmAttack(type,now){
+    pmAttackBusy=true;const generation=++pmRequestGeneration;
     try{
-      let result;
-      if(onRecruiterBump)result=await onRecruiterBump({contactKind});
-      else{
-        pmBumpHits=Math.min(PM_REQUIRED_BUMPS,pmBumpHits+1);
-        if(pmBumpHits===PM_REQUIRED_BUMPS&&contactKind!=='chair')pmBumpHits=PM_REQUIRED_BUMPS-1;
-        result={recruiterBump:{hits:pmBumpHits,required:PM_REQUIRED_BUMPS,started:pmBumpHits===PM_REQUIRED_BUMPS},recruiterEncounter:pmBumpHits===PM_REQUIRED_BUMPS?{id:`local-pm-${now}`,ownerId:pmLocalId,startedAt:now,updatedAt:now,combat:null}:null};
-      }
+      const result=onRecruiterAttack?await onRecruiterAttack({type}):{recruiterEncounter:{id:`local-pm-${now}`,ownerId:pmLocalId,startedAt:now,updatedAt:now,initialAttack:type,combat:null}};
       if(!running||generation!==pmRequestGeneration)return;
-      if(result?.recruiterBump){pmBumpHits=result.recruiterBump.hits??pmBumpHits;emitPmUi(result.recruiterBump.reason==='chair-needed'?'One more bump into the recruiter’s chair.':undefined);}
       if(result?.recruiterEncounter)setRecruiterEncounter(result.recruiterEncounter,pmLocalId);
-    }finally{if(generation===pmRequestGeneration)pmBumpBusy=false;}
-  }
-  function updateRecruiterBump(contact,now,requestedDirection){
-    if(!pmStation||pmEncounter||seated||seatEntry||seatExit)return;
-    let kind=contact?.kind==='recruiter-chair'&&contact.stationIndex===pmStation.stationIndex?'chair':contact?.id===`recruiter:${PM_RECRUITER_JOB_ID}`?'recruiter':null;
-    if(kind==='recruiter'&&requestedDirection){const reach={x:playerPosition.x+requestedDirection.x*.2,z:playerPosition.z+requestedDirection.z*.2};if(moveWithCharacters(playerPosition,reach,[pmChairRoute],[]).blocked)kind='chair';}
-    // Let the body visibly step back before the next impact; key repeat and
-    // releasing/repressing while still touching the chair remain one bump.
-    if(!kind&&pmLastBumpPoint&&Math.hypot(playerPosition.x-pmLastBumpPoint.x,playerPosition.z-pmLastBumpPoint.z)<.14)kind=pmLastBumpPoint.kind;
-    if(!pmBumpGate.update(kind,now)||pmBumpBusy)return;
-    pmLastBumpPoint={x:playerPosition.x,z:playerPosition.z,kind};
-    if(pmBumpHits>=PM_REQUIRED_BUMPS-1){pmLanding=choosePmLanding();if(!pmLanding){emitPmUi('Give the recruiter a little room to fall, then bump the chair again.');return;}}
-    requestPmBump(kind,now).catch(()=>{if(running)emitPmUi('The bump couldn’t connect. Step back and try again.');});
+    }catch{if(running)emitPmUi('The attack could not connect. Try again.');}
+    finally{if(generation===pmRequestGeneration)pmAttackBusy=false;}
   }
   function recruiterFightPose(state,now,playerSide=false){
-    if(!state||!['approaching','fighting'].includes(state.phase))return null;
+    if(!state||['returning','seated'].includes(state.phase))return null;
     const attack=playerSide?state.playerAttack:state.recruiterAttack;
     const progress=attack&&Number.isFinite(attack.startedAt)?Math.max(0,Math.min(1,(now-attack.startedAt)/PM_ATTACK_MS[attack.type])):0;
     return {guard:1,punch:attack?.type==='punch'?progress:0,kick:attack?.type==='kick'?progress:0,punchSide:attack?.seq%2?'right':'left'};
   }
   function attackRecruiter(type){
-    if(!running||!pmDuel||pmEncounter?.ownerId!==pmLocalId||seated||seatEntry||seatExit)return false;
-    const accepted=pmDuel.attack(type,Date.now()+serverTimeOffset);if(accepted){pmCombat={...pmDuel.getState(),chairOffset:pmChairOffset};publishMovement();emitPmUi();}return accepted;
+    if(!running||seated||seatEntry||seatExit||!['punch','kick','slam'].includes(type))return false;
+    const now=Date.now()+serverTimeOffset;
+    if(!pmEncounter){if(type==='slam'||pmAttackBusy||!pmIsNearby())return false;pmLanding=choosePmLanding();if(!pmLanding){emitPmUi('Move to a clear side of the chair first.');return false;}requestPmAttack(type,now);return true;}
+    if(!pmDuel||pmEncounter.ownerId!==pmLocalId)return false;
+    let plan;if(type==='slam'){plan=choosePmSlam();if(!plan){emitPmUi('Make a little room for the slam.');return false;}}
+    const accepted=pmDuel.attack(type,now,plan?{slamLanding:plan}:undefined);if(accepted){pmCombat={...pmDuel.getState(),chairOffset:pmChairOffset};publishMovement();emitPmUi();}return accepted;
   }
   function endRecruiterFight(){if(!pmDuel||pmEncounter?.ownerId!==pmLocalId||['returning','seated'].includes(pmCombat?.phase))return false;pmDuel.end();pmCombat={...pmDuel.getState(),chairOffset:pmChairOffset};emitPmUi();return true;}
   function movePmRecruiter(from,to,rotation){
@@ -791,12 +912,12 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
     if(pose.complete){pmRestoring=true;pmRestoreElapsed=0;}
   }
   function updateRecruiterDuel(dt,now){
-    if(!pmStation||!pmEncounter||!pmCombat)return;
+    if(!pmStation||!pmEncounter||!pmCombat){emitPmUi();return;}
     pmWaitingMessage=null;
     if(pmDuel&&(pmEncounter.ownerId===pmLocalId||pmEncounter.ownerId==='departed-owner')){
       if(pmCombat.phase==='returning')updatePmReturn(dt);
       else{
-        const result=pmDuel.update(dt*1000,{now,player:{x:player.position.x,z:player.position.z,rotation:player.rotation.y},move:movePmRecruiter,canAdvanceFall:pose=>{
+        const result=pmDuel.update(dt*1000,{now,slamPosition:pmSlamPoint,canAdvanceSlam:pose=>pmSlamStepClear(pose),contactRange:({actorSide,phase})=>actorSide==='player'&&['falling','grounded','recovering'].includes(phase)?2:undefined,canPlayerContact:pmActualPlayerContact,player:{x:player.position.x,z:player.position.z,rotation:player.rotation.y},move:movePmRecruiter,canAdvanceFall:pose=>{
           const offset=pose.phase==='falling'?-.45*pmEase(Math.min(1,pose.elapsed/PM_FALL_MS/.25)):-.45;
           if(!pmChairCanMove(offset)||!pmSkinClear({...pose,chairOffset:offset})){pmWaitingMessage='Give the recruiter a little room to get up.';return false;}
           setPmChairOffset(offset);return true;
@@ -806,20 +927,20 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       if(pmEncounter.ownerId===pmLocalId&&now-pmLastPublished>=100){pmLastPublished=now;publishMovement();}
       if(pmCombat?.phase==='seated'){
         if(pmEncounter?.ownerId===pmLocalId)publishMovement();
-        else{pmEncounter=null;pmCombat=null;pmDuel=null;pmBumpHits=0;pmLanding=null;pmLastBumpPoint=null;pmBumpGate.reset();resetPmRecruiter();}
+        else{pmEncounter=null;pmCombat=null;pmDuel=null;pmLanding=null;pmVolumes=[];pmSlamCached=null;resetPmRecruiter();}
       }
     }
     if(pmCombat){
-      setPmChairOffset(pmCombat.chairOffset??0);attachPmRecruiter();pmStation.recruiter.position.set(pmCombat.x,0,pmCombat.z);pmStation.recruiter.rotation.y=pmVisualRotation(pmCombat);
-      const body=recruiterBodies.find(record=>record.id===`recruiter:${PM_RECRUITER_JOB_ID}`);if(body){body.x=pmCombat.x;body.z=pmCombat.z;const fall=pmCombat.phase==='falling'?Math.max(0,Math.min(1,(pmCombat.elapsed/PM_FALL_MS-.25)/.75)):['grounded','recovering'].includes(pmCombat.phase)?1:0;const recover=pmCombat.phase==='recovering'?Math.min(1,pmCombat.elapsed/PM_RECOVER_MS):0;body.radius=CHARACTER_RADIUS+fall*(1-recover);}
-      pmEmotion?.update(['approaching','fighting'].includes(pmCombat.phase)?1:.45);pmSpeech.hidden=pmCombat.phase==='seated';pmSpeech.textContent=pmCombat.phase==='fighting'?'#!?':pmCombat.phase==='returning'?'…':'!!';
+      setPmChairOffset(pmCombat.chairOffset??0);attachPmRecruiter();pmStation.recruiter.position.set(pmCombat.x,pmSlamHeight(pmCombat),pmCombat.z);pmStation.recruiter.rotation.y=pmVisualRotation(pmCombat);
+      const body=recruiterBodies.find(record=>record.id===`recruiter:${PM_RECRUITER_JOB_ID}`);if(body){body.x=pmCombat.x;body.z=pmCombat.z;const fall=pmCombat.phase==='falling'?Math.max(0,Math.min(1,(pmCombat.elapsed/PM_FALL_MS-.25)/.75)):['grounded','recovering'].includes(pmCombat.phase)?1:0;const recover=pmCombat.phase==='recovering'?Math.min(1,pmCombat.elapsed/PM_RECOVER_MS):0;body.radius=CHARACTER_RADIUS;pmVolumes=pmBodyVolumes(pmCombat).map((volume,index)=>({...volume,id:`pm-body:${index}`,ownerId:`recruiter:${PM_RECRUITER_JOB_ID}`}));}
+      pmEmotion?.update(['provoking','falling','grounded','recovering','approaching','fighting','slamming'].includes(pmCombat.phase)?1:.45);pmSpeech.hidden=pmCombat.phase==='seated';pmSpeech.textContent=pmCombat.phase==='fighting'?'#!?':pmCombat.phase==='returning'?'…':'!!';
     }
     emitPmUi(pmWaitingMessage);
   }
   let pmPreviousPosition=pmHome?{...pmHome}:null;
   function animatePmRecruiter(dt,now){
     const state=pmCombat;if(!state)return;
-    animateCharacter(pmStation.recruiter,{dt,time:now/1000,velocityX:dt?(state.x-pmPreviousPosition.x)/dt:0,velocityZ:dt?(state.z-pmPreviousPosition.z)/dt:0,...pmPoseOptions(state)});
+    animatePmPose(pmStation.recruiter,state,{dt,time:now/1000,velocityX:dt?(state.x-pmPreviousPosition.x)/dt:0,velocityZ:dt?(state.z-pmPreviousPosition.z)/dt:0});
     pmPreviousPosition={x:state.x,z:state.z};
     projectLabel(pmSpeech,pmStation.recruiter.position,2.45);
   }
@@ -1162,7 +1283,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       }
     }else{follow.prepareWalk(null,dt);destinationRing.visible=false;}
     blockingObject=contact;
-    updateRecruiterBump(contact,wallTime+serverTimeOffset,requestedDirection);
+
     const displacementX=playerPosition.x-previousX,displacementZ=playerPosition.z-previousZ;
     const actuallyMoving=Math.hypot(displacementX,displacementZ)>.00001;
     // The body turns toward each intention while walking continues. Actual
@@ -1182,7 +1303,6 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       entryPose={...pose,seatedJobId:pose.complete?seated:null,logicalSeatedJobId:seated};
       if(pose.complete)seatEntry=null;
     }
-    updateRecruiterDuel(dt,wallTime+serverTimeOffset);
     const currentStation=seatById(seated);
     const playerPose=exitPose||entryPose||{x:playerPosition.x,z:playerPosition.z,rotation:currentStation?.rotation??angle,seatedJobId:seated};
     const view=follow.update({dt,position:playerPose,direction:facingDirection,moving:actuallyMoving,seated:!!seated,yaw:seated?playerPose.rotation:striking?strike.yaw:pmOwnFightActive()&&pmCombat?.playerAttack&&!actuallyMoving?Math.atan2(pmCombat.x-player.position.x,pmCombat.z-player.position.z):undefined});
@@ -1191,7 +1311,9 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
     player.position.set(playerPose.x,0,playerPose.z);
     const bumpAge=time-bumpStarted;
     const bumpRecoil=!seated&&bumpAge>=0&&bumpAge<.24?Math.sin(Math.PI*bumpAge/.24)*.65:0;
-    animateCharacter(player, { dt, time, velocityX: dt ? (player.position.x-previousVisualX)/dt : 0, velocityZ: dt ? (player.position.z-previousVisualZ)/dt : 0, seated: !!playerPose.seatedJobId, talking, standProgress:exitPose?.standProgress??null, seatSlide:exitPose?.seatSlide??entryPose?.seatSlide??null, sitProgress:entryPose?.sitProgress??null, walkTarget:playerPose.walkTarget??null, lounging:currentStation?.job.kind==='lounge', strike:striking?strikeProgress:0, pushing:striking&&strike.confirmed, recoil:bumpRecoil, fight:pmOwnFightActive()?recruiterFightPose(pmCombat,wallTime+serverTimeOffset,true):null, onFootstep });
+    animateCharacter(player, { dt, time, velocityX: dt ? (player.position.x-previousVisualX)/dt : 0, velocityZ: dt ? (player.position.z-previousVisualZ)/dt : 0, seated: !!playerPose.seatedJobId, talking, standProgress:exitPose?.standProgress??(pmGroundPunch(wallTime+serverTimeOffset)>0?1-.6*pmGroundPunch(wallTime+serverTimeOffset):null), seatSlide:exitPose?.seatSlide??entryPose?.seatSlide??null, sitProgress:entryPose?.sitProgress??null, walkTarget:playerPose.walkTarget??null, lounging:currentStation?.job.kind==='lounge', strike:striking?strikeProgress:0, pushing:striking&&strike.confirmed, recoil:bumpRecoil, fight:pmOwnFightActive()?recruiterFightPose(pmCombat,wallTime+serverTimeOffset,true):null, onFootstep });
+    applyPmPlayerGesture(player,wallTime+serverTimeOffset);
+    updateRecruiterDuel(dt,wallTime+serverTimeOffset);
     // A won bot chair is reserved before its stand-and-leave animation ends.
     // Reveal the role only after the visitor's visible pose is actually seated.
     if(playerPose.seatedJobId&&!seatReady)announceSeated(seatById(seated));
@@ -1206,7 +1328,8 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       const velocityZ=dt ? (character.position.z-actor.animationPrevious.z)/dt : 0;
       const challengeRecoil=striking&&actor.kind==='bot'&&desired.seatedJobId===strike.jobId?Math.sin(Math.PI*strikeProgress):0;
       const visiblySeated=!!(pose.seatedJobId||pose.loungeSeatId)&&Math.hypot(character.position.x-pose.x,character.position.z-pose.z)<.06;
-      animateCharacter(character, { dt, time: desired.fightRole?(fightClockMs??wallTime+serverTimeOffset)/1000:crowdTime, velocityX, velocityZ, seated: visiblySeated, talking: desired.social||desired.watching?!!desired.talking:visiblySeated, lounging:!!desired.loungeSeatId||seatById(poseSeatId(pose))?.job.kind==='lounge', phaseOffset: (Number(String(desired.id).replace(/\D/g,''))||0)*.6, standProgress:pose.standProgress,seatSlide:pose.seatSlide??null,sitProgress:pose.sitProgress??null,walkTarget:pose.walkTarget??null,fallProgress:pose.fallProgress??null,recoveryProgress:pose.recoveryProgress??null,pushSide:pose.pushSide??1, strike:actor.kind==='bot'?(desired.strike||0):0, recoil:Math.max(challengeRecoil,actor.kind==='bot'&&!desired.fightRole?(desired.recoil||0):0), paddleSwing:desired.tableTennis?desired.swing:null, fight:pose.fightPose??(pmEncounter?.ownerId===desired.id?recruiterFightPose({...pmCombat,playerAttack:desired.combatAction??pmCombat?.playerAttack},wallTime+serverTimeOffset,true):null) });
+      animateCharacter(character, { dt, time: desired.fightRole?(fightClockMs??wallTime+serverTimeOffset)/1000:crowdTime, velocityX, velocityZ, seated: visiblySeated, talking: desired.social||desired.watching?!!desired.talking:visiblySeated, lounging:!!desired.loungeSeatId||seatById(poseSeatId(pose))?.job.kind==='lounge', phaseOffset: (Number(String(desired.id).replace(/\D/g,''))||0)*.6, standProgress:pose.standProgress??(actor.kind==='visitor'&&pmEncounter?.ownerId===desired.id&&pmGroundPunch(wallTime+serverTimeOffset,true)>0?1-.6*pmGroundPunch(wallTime+serverTimeOffset,true):null),seatSlide:pose.seatSlide??null,sitProgress:pose.sitProgress??null,walkTarget:pose.walkTarget??null,fallProgress:pose.fallProgress??null,recoveryProgress:pose.recoveryProgress??null,pushSide:pose.pushSide??1, strike:actor.kind==='bot'?(desired.strike||0):0, recoil:Math.max(challengeRecoil,actor.kind==='bot'&&!desired.fightRole?(desired.recoil||0):0), paddleSwing:desired.tableTennis?desired.swing:null, fight:pose.fightPose??(pmEncounter?.ownerId===desired.id?recruiterFightPose({...pmCombat,playerAttack:desired.combatAction??pmCombat?.playerAttack},wallTime+serverTimeOffset,true):null) });
+      if(actor.kind==='visitor'&&pmEncounter?.ownerId===desired.id)applyPmPlayerGesture(character,wallTime+serverTimeOffset,true);
       actor.emotion?.update(pose.anger??0);
       actor.animationPrevious.copy(character.position);
       if(actor.kind==='bot'&&FIGHTER_IDS.includes(desired.id)&&desired.fightRole==='fighter'){

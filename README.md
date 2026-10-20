@@ -1,11 +1,28 @@
 # Common Ground
 
 Source repository: [mayank12-dotcom/c24-playground](https://github.com/mayank12-dotcom/c24-playground).
-The repository includes the complete version 53 runtime, API, audio, tests,
+The repository includes the complete version 54 runtime, API, audio, tests,
 source scripts, previews and handoff notes. Generated build output, local
 credentials and large reproducible geometry dumps are excluded.
 
-Version 53 fixes a browser startup failure caused by the external Google Fonts
+Version 54 changes the Product Manager encounter to direct attacks. Walk near
+the recruiter chair and press **J to punch** or **K to kick**. No click or
+three-bump sequence is required. The first landed strike knocks the recruiter
+from the chair; punches and kicks remain available while they are down,
+recovering and fighting back. After three landed ordinary hits, **L** offers a
+choke slam when the opponent is close and standing, with an eight-second cooldown
+after a successful slam. The bottom controls show the available moves. Esc steps
+away; closing the controls keeps the keyboard bindings available. Solid objects
+and people remain part of the fall, throw and return clearance checks.
+
+The original navigation, self-hosted DM Sans and Space Grotesk fonts, white
+outlined characters, existing ambient bots, seating and shared sound toggle are
+retained. One visitor owns the recruiter encounter at a time; connected visitors
+can observe through the existing shared API. See the version 54 section of
+`design-qa.md` for current verification and deployment evidence. Earlier release
+results below describe their own source versions.
+
+Version 53 fixed a browser startup failure caused by the external Google Fonts
 stylesheet. When that request was blocked, Chromium reproduced a failed Vite CSS
 preload and the world module did not start. DM Sans and Space Grotesk now load
 from four local variable-weight WOFF2 files, with their original OFL licenses.
@@ -16,7 +33,8 @@ See `public/fonts/README.md` for provenance and the version 53 section of
 `design-qa.md` for the actual browser verification scope and result. Version 52's
 previous automated totals below do not establish a successful browser startup.
 
-Version 52 adds a playable encounter with the Product Manager recruiter. Any
+Historical version 52 added a playable encounter with the Product Manager recruiter.
+Its three-bump trigger is superseded by version 54. In that release, any
 visitor can trigger it with three separate bumps into the recruiter or their
 chair; the third bump must hit the chair. Step back between contacts. The
 recruiter tumbles, gets up and approaches the challenger. The bottom controls
@@ -116,7 +134,7 @@ The rooms use distinct colors: dusty blue in the Studio, lavender in the Quiet L
 - Choose Class 24 in the navigation to walk to the information room. Reach an exhibit and single-click it to read its short dummy paragraph in the sidebar; distant clicks show a closer-approach hint.
 - Job descriptions appear only after sitting down, including after a bot leaves a won chair.
 - At a bot's chair, press Space or click Push once. The bot visibly tumbles onto the lawn beside the chair, pauses, recovers, and walks away. The visitor waits for the chair to clear, then sits smoothly. A blocked landing asks for more room before a push can be confirmed.
-- Bump the Product Manager recruiter or their chair three separate times, ending with the chair, to start a duel. Holding movement against it counts once. J punches, K kicks and Esc steps away. Move close and face the recruiter to land a hit. X hides the controls without ending combat. One real visitor can challenge this recruiter at a time; other connected visitors can watch.
+- Walk near the Product Manager recruiter chair and press J to punch or K to kick. The first landed strike knocks the recruiter from the chair without a click or bump sequence. Continue attacking while they are down, getting up or standing. After three landed ordinary hits, L offers a close-range choke slam against a standing opponent, with an eight-second cooldown after a successful slam. Move close and face the recruiter to land a hit. Esc steps away; X hides the controls without ending combat. One real visitor can challenge this recruiter at a time; other connected visitors can watch.
 - Read the role in the sidebar; Apply starts the interview while seated.
 - All opportunities and Explore open the roster while keeping the visitor in their current chair. Choosing another role starts the smooth get-up and walk to its chair automatically; choosing the current role reopens its description without moving. Leave table & explore still explicitly gets up.
 - Movement keys close the job window and start a visible get-up animation: shift over planted feet, rise for about 0.75 seconds, then take the shortest clear departure at normal speed. A clear front exit is allowed; a table or backrest can require going around a side. The chair stays reserved until the visitor is clear; an object or another person pauses the entire transfer. Held keys resume walking after the exit, and a released tap leaves the visitor standing. Text fields retain normal typing and arrow-key behavior.
@@ -441,7 +459,7 @@ is claimed.
 
 Version 42 release verification: **215 focused checks across 17 test files passed**, including 19 selected actual-world checks. All 34 new seats have clear lobby routes, all nine shared sofas pass paired-body checks, and representative entry/exit and occupied-neighbor transfers pass actual skin/sole checks. The final production build, exact-byte HTTP delivery, all ten audio decodes, standalone inline JavaScript/audio validation, and ZIP restore integrity passed. The complete world suite was not rerun; no hands-on browser playtesting or Vercel deployment is claimed.
 
-The current version 53 release targets are `common-ground-v53.html`, `common-ground-v53.zip`, `common-ground-v53-vercel.zip`, and `common-ground-v53-MEMORY.md`. The standalone embeds all four local font files and ten runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
+The current version 54 release targets are `common-ground-v54.html`, `common-ground-v54.zip`, `common-ground-v54-vercel.zip`, and `common-ground-v54-MEMORY.md`. The standalone embeds all four local font files and ten runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
 
 New integration checks execute actual world ticks, scene geometry, and character rigs with the GPU and DOM boundaries replaced. They cover body contacts, separate visitor spawn positions, a timed rise with grounded feet, paused or side departures around people, cancelled navigation, world teardown, and blocked seating arrivals. New checks measure pelvis, ankle, and wrist continuity through walking and lowering; remote entries retain their progress across heartbeats and pause when someone crosses their path. Information checks require proximity and preserve existing chats. A 600-tick scene keeps all 19 bots and the local visitor visible and separated through three bot departures. Independent randomized collision checks covered 17,665 sweeps and over 1.78 million sampled positions without penetration. These are automated simulations, not hands-on browser verification.
 
