@@ -59,7 +59,9 @@ test('the soft blush follows the actual head surface and brows leave the dot eye
   const geometry = blush.geometry;
   geometry.computeBoundingBox();
   assert.ok(geometry.index.count > 300, 'the tint follows the smooth existing head mesh');
-  assert.ok(geometry.index.count / 3 < 3000, 'the expression stays small');
+  const bodyTriangles = character.userData.mesh.geometry.index.count / 3;
+  assert.ok(geometry.index.count / 3 < 4500 && geometry.index.count / 3 < bodyTriangles / 3,
+    'the head-only expression stays below one third of the skin and within its shared geometry budget');
   assert.ok(geometry.boundingBox.min.y > -.18, 'the blush must not spread down the neck or body');
   character.userData.mesh.geometry.computeBoundingBox();
   const headRestHeight = character.userData.rig.rest.hips.position[1]
@@ -124,6 +126,36 @@ test('updating the expression reuses its geometry, materials, and object tree', 
   assert.deepEqual(after, objects);
   assert.deepEqual(after.filter(object => object.geometry).map(object => object.geometry), geometries);
   assert.deepEqual(after.filter(object => object.material).map(object => object.material), materials);
+});
+
+test('head overlays follow the bind height instead of a fixed character proportion', t => {
+  const { characters: [character], emotion } = fixture(t);
+  const original = emotion(character);
+  const rig = character.userData.rig;
+  const offset = .125;
+  const shiftedGeometry = character.userData.mesh.geometry.clone().translate(0, offset, 0);
+  const shiftedHead = new THREE.Group();
+  for (const eye of rig.head.children.filter(child => child.name === 'minimal-dot-eye')) shiftedHead.add(eye.clone());
+  const rest = structuredClone(rig.rest);
+  rest.hips.position[1] += offset;
+  const shifted = createCharacterEmotion({ userData: {
+    rig: { head: shiftedHead, rest }, mesh: { geometry: shiftedGeometry },
+  } });
+  t.after(() => { shifted.dispose(); shiftedGeometry.dispose(); });
+  const originalTint = original.root.getObjectByName('fighter-head-blush').geometry;
+  const shiftedTint = shifted.root.getObjectByName('fighter-head-blush').geometry;
+  assert.equal(shiftedTint.index.count, originalTint.index.count,
+    'the same head-relative skin region is selected at a different bind height');
+  for (const attribute of ['position', 'normal', 'color']) {
+    const a = originalTint.attributes[attribute], b = shiftedTint.attributes[attribute];
+    assert.equal(a.count, b.count);
+    for (let index = 0; index < a.array.length; index++) assert.ok(Math.abs(a.array[index] - b.array[index]) < 1e-6,
+      `head-local ${attribute} must stay aligned when the bind height changes`);
+  }
+  for (const name of ['fighter-left-angry-brow', 'fighter-right-angry-brow']) {
+    assert.ok(original.root.getObjectByName(name).position.distanceTo(shifted.root.getObjectByName(name).position) < 1e-6,
+      'brow depth is projected using the matching bind height');
+  }
 });
 
 test('disposing one fighter preserves the other overlay and the last disposal releases shared resources once', t => {

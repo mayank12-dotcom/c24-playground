@@ -1,4 +1,29 @@
-# Common Ground — version 50 handoff
+# Common Ground — version 51 handoff
+
+Latest character update, 20 October 2026 (UTC): the user supplied a dimensional
+3D mannequin reference and requested its form while retaining the white body
+and black outline. Version 51 uses a larger spherical head, compact tapered
+body, slimmer relaxed arms, rounded mitten ends and more exposed legs. This
+latest form supersedes the older 2D-reference proportion numbers below. Keep
+the existing tiny eyes, bald default, optional Fresh Look hair, recruiter ties,
+movement and collision-safe seating. No stock-photo texture or external model
+asset is used. The current actual-geometry preview is
+`artifacts/character-reference-v51.png`; it is an offline render, not browser
+verification. The prototype remains separate from the last user-run Vercel site.
+The production build and persistent standalone exporter pass. Final character,
+fight-motion, footfall-motion and emotion commands all exited zero on identical
+before/after source hashes. Their first child-pipe reporter output was lost, so
+`verification/version-51/core-verification-summary.json` labels the 46 cases as
+declared, not a captured aggregate. A separate descriptor run captured footfall
+12/12. Direct collision/shoulder reporters captured 23/23 and coordinator/export
+54/54. See the latest QA section for selected actual-world results. The eight
+preview poses were re-exported against final source and matched exactly. No
+hands-on browser or new Vercel deployment is claimed.
+Seven final actual-world cases also passed with unchanged source hashes,
+covering all lounge cushions, five-sided chair transfers, both beanbag facings,
+remote lowering, the nineteen-bot crowd, bot chair handoffs and a complete fight.
+The selected world groups took roughly 13–14 minutes under concurrent CPU load;
+run only relevant cases rather than assuming the historical full-suite timing.
 
 GitHub migration completed on 20 October 2026 (Asia/Calcutta). The user approved
 publishing the source in the public repository
@@ -21,11 +46,12 @@ files. See `DEPLOYMENT.md` for the current release preparation and access blocke
 Use an authenticated deployment session when access becomes available; do not
 recover old chat credentials or route around the enforced policy.
 
-Snapshot date: 19 October 2026 (Asia/Calcutta). This file records project context for continuing the same chat from another device. Later user instructions take precedence over these notes.
+Snapshot date: 20 October 2026 (UTC). This file records project context for continuing the same chat from another device. Later user instructions take precedence over these notes.
 
 ## What to resume
 
-The current prototype is **version 50**. The user clarified that real candidates
+The current prototype is **version 51**. Its character update is described above.
+The latest multiplayer configuration state remains the version 50 state below. The user clarified that real candidates
 on separate computers must see one another. The existing visitor API, Redis
 store and remote-character renderer already implement that shared presence.
 Independent read-only review found no concrete visibility defect. Vercel must
@@ -102,31 +128,31 @@ The same stable seat coordinates are shared by the local world, remote visitors,
 
 Version 42 release verification: **215 focused checks across 17 test files passed**, including 19 selected actual-world checks. All 34 new seats have clear lobby routes, all nine shared sofas pass paired-body checks, and representative entry/exit and occupied-neighbor transfers pass actual skin/sole checks. The final production build, exact-byte HTTP delivery, all ten audio decodes, standalone inline JavaScript/audio validation, and ZIP restore integrity passed. The complete world suite was not rerun; no hands-on browser playtesting or Vercel deployment is claimed. Continue from the existing project rather than rebuilding it.
 
-Preserve version 41's four-variation fight-impact pool: three sampled punch WAVs and the existing click WAV. Contacts follow actual visible, collision-paused punches and kicks; volume fades continuously with actual player distance, independent of the camera. Sound on/off also governs background music, footsteps, dismissal whooshes, and button clicks. All ten runtime audio assets remain. Version 36's smooth white character proportions and shoulder/arm surface remain, and the character **keeps walking while smoothly changing direction** as requested in version 35. Do not restore version 34's forced stop before turning.
+Preserve version 41's four-variation fight-impact pool: three sampled punch WAVs and the existing click WAV. Contacts follow actual visible, collision-paused punches and kicks; volume fades continuously with actual player distance, independent of the camera. Sound on/off also governs background music, footsteps, dismissal whooshes, and button clicks. All ten runtime audio assets remain. Version 51 supersedes version 36's proportions while preserving its smooth white skin and joined shoulder/arm surface, and the character **keeps walking while smoothly changing direction** as requested in version 35. Do not restore version 34's forced stop before turning.
 
 This is a local source snapshot, not a new Vercel deployment. A historical public URL mentioned in the chat is https://flatland-nu.vercel.app/; its current contents and version have not been verified here.
 
 ## Files in the portable ZIP
 
-The version 50 release targets are `/workspace/common-ground-v50.html`,
-`/workspace/common-ground-v50.zip`, `/workspace/common-ground-v50-MEMORY.md`, and
-the lean `/workspace/common-ground-v50-vercel.zip`. The full portable ZIP extracts
-to `common-ground-v50/`; the Vercel ZIP contains the project files at its root.
+The version 51 release targets are `/workspace/common-ground-v51.html`,
+`/workspace/common-ground-v51.zip`, `/workspace/common-ground-v51-MEMORY.md`, and
+the lean `/workspace/common-ground-v51-vercel.zip`. The full portable ZIP extracts
+to `common-ground-v51/`; the Vercel ZIP contains the project files at its root.
 Current export integrity is checked against the included SHA256 manifest.
 The full portable project root contains:
 
 - `MEMORY.md`: these continuation notes; read this before the historical notes.
-- `common-ground-v48.html`: standalone runnable solo prototype, with ten runtime audio assets embedded: background music, four footfalls, dismissal whoosh, button click, and three punch samples.
+- `prototype.html`: standalone runnable solo prototype, with ten runtime audio assets embedded: background music, four footfalls, dismissal whoosh, button click, and three punch samples.
 - `src/`, `api/`, `public/`, `tests/`, `scripts/`: editable application source, shared-world API, viewport guard, checks, and optional offline render helpers.
 - `package.json`, `package-lock.json`, `index.html`, `server.mjs`, `vite.config.js`, `vercel.json`, `.env.example`: install, run, build, and deployment configuration.
-- `dist/`: the final static production build. This directory alone does not execute `api/world.js`.
+- Build output and dependencies are omitted; run `npm ci` and `npm run build` after extraction. A static `dist/` alone does not execute `api/world.js`.
 - `README.md`: detailed current functionality and source map.
 - `DEPLOYMENT.md`: Vercel and Redis setup; its environment-specific access notes describe the original workspace, not necessarily the next device.
-- `design-qa.md`: chronological evidence and previous iterations. The version 46 chair-contact section and this file describe the latest change; the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
+- `design-qa.md`: chronological evidence and previous iterations. The version 51 character section and this file describe the latest change; the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
 - `artifacts/office-v48-preview.png`: an offline still study exported from the actual world, including all nine real desk/recruiter scenes. It verifies geometry and material colors with an inspection renderer; it is not a browser screenshot or a runtime lighting match. Regenerate with `node scripts/preview-office.mjs` and the existing Blender render helper. Its 114 MB intermediate JSON is intentionally omitted.
 - `artifacts/furniture-seating-v42-preview.png` and its report: eight offline actual-mesh furniture/occupant views. Regenerate them with `scripts/preview-furniture-seats.mjs` and `scripts/render-characters.py`; the large raw export and render caches are omitted.
-- `artifacts/`: the current shoulder before/after render, geometry report/raw capture, archived character baseline, relevant room/color renders, and `footstep-sampling-report.json`, `dismiss-sampling-report.json`, `click-sampling-report.json`, and `fight-sampling-report.json`. Historical generated previews and render caches are omitted from this portable ZIP.
-- `verification/`: the current version 48 office-layout/render/collision/routes/seating/coordinator/export results and source hashes, with prior version 47 and earlier evidence retained as historical; pre-v47 stylesheet checks did not establish valid CSS, build logs, portable result summaries, and verification source hashes. Do not mistake prior version 36–41 results for a version 42 rerun.
+- `artifacts/`: the current character reference render/report, historical shoulder comparison and character baseline, relevant room/color renders, and `footstep-sampling-report.json`, `dismiss-sampling-report.json`, `click-sampling-report.json`, and `fight-sampling-report.json`. Historical generated previews and render caches are omitted from this portable ZIP.
+- `verification/version-51/`: current focused character/motion/furniture/coordinator/export results and source fingerprints. Earlier reports remain historical; do not treat previous totals as a current full-suite rerun.
 - `PACKAGE-CONTENTS.md` and `SHA256SUMS`: export scope and integrity information.
 
 Dependencies, credentials, browser state, and machine-specific tool state are excluded. Original reference images were supplied in the chat; the user's `/Users/mynk/...` paths are not files on a new device. Runtime characters and scenery are procedural and do not require those images to run.
@@ -187,9 +213,9 @@ The information room contains five nearby clickable exhibits with short **dummy 
 
 ### Characters and ambient life
 
-- Body materials are pure white with a black outline, following the user's front/back/profile/walk drawings: round large head, low dot eyes, soft pear torso, long bowed arms/plain mittens, smooth short legs, and flat rounded soles. Defaults are bald; Fresh Look changes only the visitor's optional hairstyle. Recruiters wear ties.
-- Keep the continuous shared skin and 15-bone rig. White skin uses 6,656 vertices/13,308 triangles; skin plus outline stays under the existing 30,000-triangle budget. Do not restore separate muscular blob limbs.
-- Motion uses actual displacement, articulated hips/knees, planted support feet, lifted swing feet, and counter-swinging arms. Shared seated hip height is 0.555, keeping the body above the 0.30 cushions. Preserve the small arm tuck and tumble floor support correction.
+- Body materials are pure white with a black outline, following the latest dimensional 3D mannequin: a large spherical head, low dot eyes, compact tapered torso, slim relaxed arms/plain mittens, exposed smooth legs, and small rounded soles. Defaults are bald; Fresh Look changes only the visitor's optional hairstyle. Recruiters wear ties.
+- Keep the continuous shared skin and 15-bone rig. White skin uses 6,784 vertices/13,564 triangles; skin plus outline stays under the existing 30,000-triangle budget. Do not restore separate muscular blob limbs.
+- Motion uses actual displacement, articulated hips/knees, planted support feet, lifted swing feet, and counter-swinging arms. Shared seated hip height is 0.485, keeping the body above the 0.30 cushions. Preserve the small arm tuck and tumble floor support correction.
 - Preserve all 19 ambient bots: 3 walking, exactly 2 fighters, 3 spectators, 4 table-tennis players, 3 job-chair occupants, and 4 couch companions. Only two fight. Their encounter includes bumping, punches, a push/fall, brief low kicks, recovery, reddish reactions, and symbol-only speech clouds. Do not remove other bots to create the fight.
 - Social rooms have seated couch/beanbag conversations without job desks or laptops. The visitor can join the audience or use free lounge seats.
 

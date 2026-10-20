@@ -25,20 +25,29 @@ function surfaceDepth(mesh, x, y) {
 }
 
 test('the upper shoulders form a visible chest-to-arm bridge while the lower arms remain separate', t => {
-  const character = makeCharacter(t), mesh = character.userData.mesh;
+  const character = makeCharacter(t), mesh = character.userData.mesh, rig = character.userData.rig;
   // The narrow slit used to extend almost to the shoulder. In a front or back
-  // view, it cut through this band even though the skin was one closed mesh.
-  // Require actual surface thickness here, rather than relying on vertex or
-  // triangle counts that say nothing about the visible shoulder connection.
-  for (const side of [-1, 1]) {
-    for (const y of [1.14, 1.16, 1.18, 1.20]) for (const x of [.28, .30, .32, .34, .36, .38]) {
-      const thickness = surfaceDepth(mesh, side * x, y);
+  // view, it cut through the chest-to-arm bridge even though the skin was one
+  // closed mesh. The latest reference has narrower, more sloping shoulders, so
+  // sample the band just below each shoulder pivot rather than the old broad
+  // silhouette's outer edge. Thickness still measures the actual posed skin.
+  for (const [side, prefix] of [[-1, 'left'], [1, 'right']]) {
+    const shoulder = rig[`${prefix}Arm`].getWorldPosition(new THREE.Vector3());
+    const elbow = rig[`${prefix}Forearm`].getWorldPosition(new THREE.Vector3());
+    for (const drop of [.14, .12, .10]) for (const width of [.88, 1, 1.12, 1.20, 1.28]) {
+      const x = shoulder.x * width, y = shoulder.y - drop;
+      const thickness = surfaceDepth(mesh, x, y);
       assert.ok(thickness > .04,
-        `the ${side < 0 ? 'left' : 'right'} upper shoulder must stay visibly joined at ${side * x}, ${y}; thickness ${thickness}`);
+        `the ${side < 0 ? 'left' : 'right'} upper shoulder must stay visibly joined at ${x}, ${y}; thickness ${thickness}`);
     }
-    for (const y of [.86, .92, .98]) {
-      assert.equal(surfaceDepth(mesh, side * .35, y), 0,
+    for (const drop of [.17, .11, .05]) {
+      const y = elbow.y - drop;
+      assert.equal(surfaceDepth(mesh, shoulder.x * 1.20, y), 0,
         'the lower relaxed arm must retain its soft separation from the body instead of becoming a solid torso slab');
+      assert.ok(surfaceDepth(mesh, elbow.x, y) > .04,
+        'the relaxed forearm must remain visibly present beside its gap');
+      assert.ok(surfaceDepth(mesh, shoulder.x * .70, y) > .04,
+        'the torso must remain visibly present beside its gap');
     }
   }
 });

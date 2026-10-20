@@ -1,9 +1,22 @@
 # Common Ground
 
 Source repository: [mayank12-dotcom/c24-playground](https://github.com/mayank12-dotcom/c24-playground).
-The repository includes the complete version 50 runtime, API, audio, tests,
+The repository includes the complete version 51 runtime, API, audio, tests,
 source scripts, previews and handoff notes. Generated build output, local
 credentials and large reproducible geometry dumps are excluded.
+
+Version 51 reshapes every character around the latest supplied 3D mannequin
+reference: a large spherical head above a compact tapered body, narrow relaxed
+arms, rounded mitten hands, and more exposed legs. The finish stays white with
+an ink outline, with no photographed texture. Hair, eyes, recruiter ties and
+fighter expressions follow the revised head and body. The existing movement,
+seating, office, original navigation, sound and shared-visitor API are retained.
+See `artifacts/character-reference-v51.png` for actual posed geometry rendered
+offline; this is not a browser screenshot or a new Vercel deployment. The
+production build and standalone export pass. Character, gait, fighting and
+expression test commands exit successfully, with focused physical-world checks
+covering furniture clearance and bot scenes. `design-qa.md` records scope and
+reporter limitations separately from older release counts.
 
 Version 50 makes the multiplayer connection state explicit. When the shared
 visitor API cannot be reached, the navbar now says “Live visitors unavailable”
@@ -92,23 +105,22 @@ The camera keeps its direction when movement starts. After sustained travel it g
 
 ## Characters and movement
 
-Characters are rebuilt from the supplied front, back, profile, and walking references:
-a larger nearly circular head, low-set dot eyes, narrow sloping shoulders, a long
-soft pear torso, bowed hanging arms with plain mitten ends, short smooth legs,
-and small flat rounded soles. The head is about 35.7% of standing height and
-the eyes sit about 67.7% down the head, matching the main drawing proportions.
-The body material is white, including on the visitor, recruiters, and bots.
-One closed connected white skin uses 6,656 shared vertices and 13,308 triangles,
-smooth field normals, and the existing 15-bone rig. Skin plus its ink outline
-remains below the existing 30,000-triangle character budget. Foot placement stays
-grounded, with no model or texture downloads. Everyone starts bald; five hairstyles remain available
-through A fresh look for the visitor. Recruiters retain their ties.
+Characters follow the newest dimensional reference: a spherical head about
+40% of total height, a compact tapered torso, slim sloping shoulders, relaxed
+arms with rounded mitten ends, exposed straight legs and small rounded soles.
+Low-set dot eyes retain the established face. The body is white on the visitor,
+recruiters, bots and live visitors, with a continuous black inverted-hull outline.
+One connected watertight skin shares a 15-bone rig and stays below the existing
+30,000-triangle budget including its outline and optional accessories. The model
+is generated once per world without model or texture downloads. Everyone starts
+bald; five hairstyles remain available through A fresh look. Recruiters retain
+their ties below the larger chin.
 
 Walking and body rotation happen together, with no turn-related pause. A brief acceleration blends the first step from rest into the normal gait; corners and reversals do not restart it. Walking is driven by actual movement: hips and knees articulate, one foot lifts
 while the other remains planted, and relaxed bent arms counter-swing. Stopping
 settles the feet rather than continuing a floating loop. Seated characters bend
 their knees, rest their feet on the floor, and keep their hands near the desktop.
-A shared seated pelvis height of .555 keeps the final supporting skin at about .321 and its outline at .304, just above the .30 cushions, with knees bent and soles on the ground. A small arm tuck during the transfer keeps the longer reference hands above the desktop. Couch and beanbag anchors sit toward the front edge; job chairs use shallow cushions and widely spaced legs so thighs, shins, and feet stay clear of the furniture.
+The seated pose is fitted to the new skin so the pelvis rests just above the .30-unit cushion and the solved feet stay on the ground. A small arm tuck during the transfer keeps the longer reference hands above the desktop. Couch and beanbag anchors sit toward the front edge; job chairs use shallow cushions and widely spaced legs so thighs, shins, and feet stay clear of the furniture.
 
 Seating compares the complete clear access routes from the visitor’s current position instead of assigning one fixed side. A visitor already in the open front strip uses the short direct transfer; someone behind a backrest steps clear and goes around the nearer reachable side. At the cushion, a short centered backward step, planted feet, and controlled lowering keep the transfer continuous. The feet stay planted while the hips move back. Backrests, armrests, chair legs, and rails stay solid during the transfer; only the cushion's intended support area is accessible to its occupant. Interrupted lowering reverses from the visible pose, and remote visitors use the same entry and departure paths.
 
@@ -117,9 +129,10 @@ Version 36 smooths the shoulder-to-arm surface with a broader rounded attachment
 The same model and motion apply to the visitor, recruiters, bots, and live visitors.
 Offline pose previews can be regenerated with `scripts/preview-characters.mjs` and
 `scripts/render-characters.py` when Blender is available. These developer helpers
-are not required to build or run the website. The archived eight-view reference baseline
-is in `artifacts/reference-character-v33-preview.png` and includes front, back,
-side, three-quarter, walking, pushing, seated typing, and an optional hairstyle.
+are not required to build or run the website. The current eight-view reference preview
+is `artifacts/character-reference-v51.png`, with front, back, side, walking,
+three-quarter, pushing, seated typing, and an optional hairstyle. The older
+drawing-based baseline remains in `artifacts/reference-character-v33-preview.png`.
 
 ## The shared world
 
@@ -395,7 +408,7 @@ is claimed.
 
 Version 42 release verification: **215 focused checks across 17 test files passed**, including 19 selected actual-world checks. All 34 new seats have clear lobby routes, all nine shared sofas pass paired-body checks, and representative entry/exit and occupied-neighbor transfers pass actual skin/sole checks. The final production build, exact-byte HTTP delivery, all ten audio decodes, standalone inline JavaScript/audio validation, and ZIP restore integrity passed. The complete world suite was not rerun; no hands-on browser playtesting or Vercel deployment is claimed.
 
-The latest version 45 release targets are `common-ground-v45.html`, `common-ground-v45.zip`, and `common-ground-v45-MEMORY.md`. The standalone retains all ten embedded runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
+The current version 51 release targets are `common-ground-v51.html`, `common-ground-v51.zip`, `common-ground-v51-vercel.zip`, and `common-ground-v51-MEMORY.md`. The standalone retains all ten embedded runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
 
 New integration checks execute actual world ticks, scene geometry, and character rigs with the GPU and DOM boundaries replaced. They cover body contacts, separate visitor spawn positions, a timed rise with grounded feet, paused or side departures around people, cancelled navigation, world teardown, and blocked seating arrivals. New checks measure pelvis, ankle, and wrist continuity through walking and lowering; remote entries retain their progress across heartbeats and pause when someone crosses their path. Information checks require proximity and preserve existing chats. A 600-tick scene keeps all 19 bots and the local visitor visible and separated through three bot departures. Independent randomized collision checks covered 17,665 sweeps and over 1.78 million sampled positions without penetration. These are automated simulations, not hands-on browser verification.
 

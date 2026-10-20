@@ -1,0 +1,62 @@
+{
+  "version": 51,
+  "reference": "Latest user-supplied dimensional 3D mannequin; form and proportions only",
+  "finish": {
+    "body": "#ffffff",
+    "outline": "#20211e",
+    "bodyTexture": null
+  },
+  "geometry": {
+    "bodyVertices": 6784,
+    "bodyTriangles": 13564,
+    "withOutlineHairAndTieTriangles": 27956,
+    "triangleBudget": 30000,
+    "sharedSkin": true,
+    "bones": 15
+  },
+  "neutralMeasurements": {
+    "height": 2.07272,
+    "headWidth": 0.829945,
+    "headWidthOverHeight": 0.400413,
+    "headDepthOverWidth": 0.975338,
+    "relaxedWidthOverHeight": 0.466289,
+    "legSplitOverHeight": 0.2727,
+    "skinSoleMinY": 0.01
+  },
+  "motionFit": {
+    "seatedHipHeight": 0.485,
+    "cushionTop": 0.3,
+    "solvedAnkleHeight": 0.11,
+    "restingFightTorsoZ": -0.055
+  },
+  "sourceSha256": {
+    "src/character.js": "bb5f55437e1179b63aade5637d4c39add3b68c8d60aac91082f5ff22504e813b",
+    "src/character-motion.js": "d1b2ba5e21062ee6b6a25cf8590789e1c38f7b098ec0c6ecb8449f57e501b51d",
+    "src/character-emotion.js": "13ac20e4bcaa17e37059a644b2aced2b4f3181ca1828750176625ee4bfe4e575"
+  },
+  "preview": "character-reference-v51.png",
+  "visualEvidence": "Offline actual skinned game geometry, not a browser screenshot; runtime lighting and interaction are not visually verified.",
+  "renderVerification": {
+    "actualMeshPosesCompared": 8,
+    "posesIdenticalToFinalSource": true,
+    "imageSha256": "02bd73bce9f10001c16d04c8ae5e65e0b2e42a66fc9b8d656520470e6e10d995",
+    "renderer": "Blender Cycles CPU, actual Three.js skinned vertices and inverted-hull outline"
+  },
+  "verification": {
+    "version": 51,
+    "testFiles": 9,
+    "capturedUniquePassingCases": 96,
+    "successfulDeclaredCasesWithoutReporterOutput": 34,
+    "world": {
+      "fit": 4,
+      "social": 3,
+      "failed": 0
+    },
+    "productionBuild": "passed",
+    "standaloneExport": "passed",
+    "previewFinalSourceVerified": true,
+    "browserVerified": false,
+    "httpVerified": false,
+    "deployed": false
+  }
+}

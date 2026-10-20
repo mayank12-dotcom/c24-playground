@@ -64,6 +64,11 @@ Vercel API functions.
 
 ## Current deployment status
 
+Version 51's latest character form is in the GitHub source and the prepared
+`common-ground-v51-vercel.zip`. It uses the same build and API configuration.
+Import or redeploy the complete project to publish the update; preparing source
+and archives does not update the public website by itself.
+
 The user independently deployed version 48 at
 https://common-ground-v48-vercel.vercel.app/ and reports seeing another visitor
 walking when testing on two computers. This has not been independently inspected

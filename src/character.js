@@ -3,10 +3,11 @@ import * as THREE from 'three';
 // One shared, seamless surface rather than a collection of overlapping spheres.
 // It is generated once, then each character gets a small articulated skeleton.
 const INK = '#20211e';
+const HEAD = Object.freeze({ y: 1.68, rx: .415, ry: .415, rz: .405 });
 const DIMENSIONS = Object.freeze({
   hipHeight: .70, thighLength: .29, shinLength: .28, footHeight: .11,
-  legSeparation: .32, shoulderHeight: 1.30, upperArmLength: Math.hypot(.19, .27),
-  forearmLength: .39, height: 2.10,
+  legSeparation: .32, shoulderHeight: 1.30, upperArmLength: Math.hypot(.17, .27),
+  forearmLength: .34, height: 2.10,
 });
 const BONE_NAMES = [
   'hips', 'torso', 'head',
@@ -20,11 +21,11 @@ const smoothstep = (a, b, value) => {
   return t * t * (3 - 2 * t);
 };
 const ARM_CURVE = Array.from({ length: 19 }, (_, index) => {
-  const y = .565 + (1.32 - .565) * index / 18;
-  const t = (y - .565) / .755;
-  return { x: .425 - .21 * smoothstep(1.08, 1.32, y) + .042 * Math.sin(t * Math.PI), y,
-    z: .012 * (1 - smoothstep(.65, 1.05, y)),
-    radius: .087 + .008 * (1 - smoothstep(.565, .68, y)) };
+  const y = .675 + (1.255 - .675) * index / 18;
+  const t = (y - .675) / .58;
+  return { x: .390 - .185 * smoothstep(1.045, 1.255, y) + .030 * Math.sin(t * Math.PI), y,
+    z: .015 * (1 - smoothstep(.73, 1.05, y)),
+    radius: .067 + .014 * (1 - smoothstep(.675, .775, y)) };
 });
 
 function ellipsoid(x, y, z, cx, cy, cz, rx, ry, rz) {
@@ -56,14 +57,14 @@ function bodyField(x, y, z, withWeights = false) {
   };
   const torsoInfluence = smoothstep(.73, 1.20, y);
   const bodyWeights = [['hips', 1 - torsoInfluence], ['torso', torsoInfluence]];
-  // A single long pear gives the reference its soft, unbroken silhouette.
-  // The nearly circular head meets the sloping upper body directly: there is
-  // no neck stalk, chest plate, waist pinch, or separate spherical pelvis.
-  const shoulderTaper = smoothstep(.98, 1.48, y);
-  join(ellipsoid(x, y, z, 0, .98, 0, .350 - .120 * shoulderTaper, .530,
-    .252 - .028 * shoulderTaper), .055, bodyWeights);
-  join(ellipsoid(x, y, z, 0, 1.72, .004, .370, .370, .355), .065, [['head', 1]]);
-  // Finish the short, softly joined legs before adding the relaxed arms.
+  // The large ball head and compact tapered torso follow the dimensional 3D
+  // reference. A smaller lower torso exposes the straight legs without changing
+  // the established planted-foot rig or introducing a separate pelvis blob.
+  const shoulderTaper = smoothstep(1.02, 1.34, y);
+  join(ellipsoid(x, y, z, 0, .965, 0, .275 - .070 * shoulderTaper, .375,
+    .215 - .025 * shoulderTaper), .055, bodyWeights);
+  join(ellipsoid(x, y, z, 0, HEAD.y, .004, HEAD.rx, HEAD.ry, HEAD.rz), .065, [['head', 1]]);
+  // Finish the softly joined legs before adding the relaxed arms.
   // The torso-to-leg union never blends a hanging mitten into the pelvis.
   for (const [side, prefix] of [[-1, 'left'], [1, 'right']]) {
     const kneeBlend = smoothstep(.325, .455, y);
@@ -77,8 +78,8 @@ function bodyField(x, y, z, withWeights = false) {
       [[`${prefix}Foot`, 1]]);
   }
   for (const [side, prefix] of [[-1, 'left'], [1, 'right']]) {
-    const elbowBlend = smoothstep(.965, 1.10, y);
-    const handBlend = 1 - smoothstep(.61, .71, y);
+    const elbowBlend = smoothstep(.975, 1.09, y);
+    const handBlend = 1 - smoothstep(.705, .775, y);
     // One curved tube gives the entire arm an uninterrupted outer contour.
     // Only the shoulder joins the torso: a clear armpit below it prevents a
     // sheet of belly skin from folding into the raised elbow during a gesture.
@@ -95,7 +96,7 @@ function bodyField(x, y, z, withWeights = false) {
     }
     // Give the upper arm a broad, soft attachment rather than the small
     // pinched contact left by a narrow capsule/torso intersection.
-    join(armDistance, .008 + .064 * smoothstep(1.07, 1.25, y),
+    join(armDistance, .008 + .064 * smoothstep(1.065, 1.235, y),
       [[`${prefix}Arm`, elbowBlend * (1 - handBlend)],
         [`${prefix}Forearm`, (1 - elbowBlend) * (1 - handBlend)], [`${prefix}Hand`, handBlend]]);
 
@@ -103,9 +104,9 @@ function bodyField(x, y, z, withWeights = false) {
   // A gently curved, sub-shoulder gap separates the relaxed hand from the
   // pear torso. Resolve it in the field as well as the sampling grid so a
   // diagonal tetrahedron cannot turn a tiny opening into a stretched sheet.
-  const gapX = .350 - .045 * smoothstep(1.06, 1.18, y);
+  const gapX = .300 - .025 * smoothstep(1.065, 1.18, y);
   const armGap = Math.max(
-    Math.hypot(Math.abs(x) - gapX, y - clamp(y, .52, 1.105)) - .025,
+    Math.hypot(Math.abs(x) - gapX, y - clamp(y, .60, 1.135)) - .022,
     Math.abs(z) - .17);
   // A rounded subtraction ends below the actual shoulder joint. The upper
   // shoulder remains a solid, smooth bridge through relaxed and raised poses.
@@ -117,16 +118,19 @@ function bodyField(x, y, z, withWeights = false) {
   // The reference has little flat soles, not separate spherical shoes.
   distance = Math.max(distance, .010 - y);
   if (withWeights) {
-    // The inside of the sloping shoulder moves with both the upper arm and
-    // chest. Keep this transition gradual even beside the narrow armpit gap.
-    const shoulderSupport = .92 * smoothstep(1.025, 1.215, y)
-      * (1 - smoothstep(.275, .445, Math.abs(x)));
-    let supported = 0;
-    for (const bone of ['leftArm', 'leftForearm', 'rightArm', 'rightForearm']) {
-      const index = BONE_INDEX[bone], share = weights[index] * shoulderSupport;
-      weights[index] -= share; supported += share;
-    }
-    weights[BONE_INDEX.torso] += supported;
+    // A surface union can switch from chest to arm within one tiny tetrahedron
+    // beside the armpit. Give that attachment a broad anatomical weight blend
+    // instead, so raised arms and falls bend the shared shoulder continuously.
+    const shoulderBlend = smoothstep(.96, 1.08, y) * (1 - smoothstep(1.28, 1.39, y));
+    const armBones = ['leftArm', 'leftForearm', 'leftHand', 'rightArm', 'rightForearm', 'rightHand'];
+    const shoulderWeight = armBones.reduce((sum, bone) => sum + weights[BONE_INDEX[bone]], weights[BONE_INDEX.torso]);
+    const armWeight = shoulderWeight * smoothstep(.20, .43, Math.abs(x));
+    weights[BONE_INDEX.torso] = weights[BONE_INDEX.torso] * (1 - shoulderBlend)
+      + (shoulderWeight - armWeight) * shoulderBlend;
+    for (const bone of armBones) weights[BONE_INDEX[bone]] *= 1 - shoulderBlend;
+    const prefix = x < 0 ? 'left' : 'right', elbowBlend = smoothstep(.975, 1.09, y);
+    weights[BONE_INDEX[`${prefix}Arm`]] += armWeight * shoulderBlend * elbowBlend;
+    weights[BONE_INDEX[`${prefix}Forearm`]] += armWeight * shoulderBlend * (1 - elbowBlend);
   }
   return withWeights ? { distance, weights } : distance;
 }
@@ -135,27 +139,27 @@ function createBodyGeometry() {
   // Marching tetrahedra needs no model downloads, third-party mesher or textures.
   // Shared edge vertices keep the result smooth and substantially smaller.
   const step = .060;
-  const min = [-.65, -.045, -.43], max = [.65, 2.145, .44];
+  const min = [-.59, -.045, -.455], max = [.59, 2.145, .455];
   const counts = min.map((v, axis) => Math.ceil((max[axis] - v) / step) + 1);
   // Follow the centre of both curved armpit gaps with one grid column each.
   // This preserves a true opening without adding global mesh density.
   const xSamples = Array.from({ length: counts[0] }, (_, index) => min[0] + index * step);
-  for (const gap of [-.35, .35]) if (!xSamples.some(value => Math.abs(value - gap) < 1e-6)) xSamples.push(gap);
+  for (const gap of [-.30, .30]) if (!xSamples.some(value => Math.abs(value - gap) < 1e-6)) xSamples.push(gap);
   xSamples.sort((a, b) => a - b); counts[0] = xSamples.length;
   // Resolve the shallow shoulder slope with a few extra rows rather than
   // increasing the density of every head, torso and limb on every character.
   const ySamples = Array.from({ length: counts[1] }, (_, index) => min[1] + index * step);
-  ySamples.push(1.185, 1.245, 1.305, 1.365);
+  ySamples.push(1.165, 1.205, 1.245, 1.285, 1.975, 2.035, 2.075);
   ySamples.sort((a, b) => a - b); counts[1] = ySamples.length;
   const [nx, ny, nz] = counts;
   const points = [], fields = [];
   const pointIndex = (x, y, z) => (y * nz + z) * nx + x;
   for (let y = 0; y < ny; y++) for (let z = 0; z < nz; z++) for (let x = 0; x < nx; x++) {
     const py = ySamples[y];
-    const gapCenter = .350 - .045 * smoothstep(1.06, 1.18, py);
+    const gapCenter = .300 - .025 * smoothstep(1.065, 1.18, py);
     const sx = xSamples[x], ax = Math.abs(sx);
-    const warp = smoothstep(.27, .35, ax) * (1 - smoothstep(.35, .43, ax));
-    const px = sx + Math.sign(sx) * (gapCenter - .35) * warp;
+    const warp = smoothstep(.24, .30, ax) * (1 - smoothstep(.30, .38, ax));
+    const px = sx + Math.sign(sx) * (gapCenter - .30) * warp;
     const point = [px, py, min[2] + z * step];
     points.push(point); fields.push(bodyField(...point));
   }
@@ -195,6 +199,26 @@ function createBodyGeometry() {
         triangle(ac, ad, bc, direction); triangle(ad, bd, bc, direction);
       }
     }
+  }
+  // Linear interpolation inside a tetrahedron cuts across rounded hand tips,
+  // shoulders and toes. Recover the curved implicit surface at the existing
+  // shared vertices instead of increasing every character's triangle count.
+  // Small bounded Newton steps keep the topology and the narrow arm gap intact.
+  const projectionEpsilon = .0005;
+  for (let i = 0; i < vertices.length; i += 3) {
+    let x = vertices[i], y = vertices[i + 1], z = vertices[i + 2];
+    for (let iteration = 0; iteration < 2; iteration++) {
+      const distance = bodyField(x, y, z);
+      if (Math.abs(distance) < .00001) break;
+      const gx = (bodyField(x + projectionEpsilon, y, z) - bodyField(x - projectionEpsilon, y, z)) / (2 * projectionEpsilon);
+      const gy = (bodyField(x, y + projectionEpsilon, z) - bodyField(x, y - projectionEpsilon, z)) / (2 * projectionEpsilon);
+      const gz = (bodyField(x, y, z + projectionEpsilon) - bodyField(x, y, z - projectionEpsilon)) / (2 * projectionEpsilon);
+      const gradientLength = Math.hypot(gx, gy, gz);
+      if (gradientLength < .0001) break;
+      const correction = clamp(distance / gradientLength, -.010, .010) / gradientLength;
+      x -= gx * correction; y = Math.max(.010, y - gy * correction); z -= gz * correction;
+    }
+    vertices[i] = x; vertices[i + 1] = y; vertices[i + 2] = z;
   }
   const skinIndices = [], skinWeights = [];
   for (let i = 0; i < vertices.length; i += 3) {
@@ -248,9 +272,9 @@ function createHairGeometry(style) {
     const theta = row / rows * hem;
     const swept = style === 1 ? .065 * Math.sin(theta) * (.5 - .5 * Math.cos(phi)) : 0;
     const crest = style === 2 ? .045 * Math.sin(theta) ** 2 * (.5 + .5 * Math.cos(phi - .6)) : 0;
-    const rx = .385 + (style === 4 ? .018 : 0), rz = .369 + (style === 4 ? .018 : 0);
+    const rx = HEAD.rx + .015 + (style === 4 ? .018 : 0), rz = HEAD.rz + .014 + (style === 4 ? .018 : 0);
     positions.push(rx * Math.sin(theta) * Math.cos(phi) - swept * .3,
-      (.385 + crest) * Math.cos(theta) + swept + .009,
+      (HEAD.ry + .015 + crest) * Math.cos(theta) + swept + .009,
       rz * Math.sin(theta) * Math.sin(phi) + .004);
   }
   for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
@@ -273,11 +297,11 @@ function createSkeleton() {
   };
   add('hips', null, 0, .70, 0);
   add('torso', 'hips', 0, .28, 0);
-  add('head', 'torso', 0, .74, 0);
+  add('head', 'torso', 0, HEAD.y - .98, 0);
   for (const [side, prefix] of [[-1, 'left'], [1, 'right']]) {
-    add(`${prefix}Arm`, 'torso', side * .28, .32, 0);
-    add(`${prefix}Forearm`, `${prefix}Arm`, side * .19, -.27, 0);
-    add(`${prefix}Hand`, `${prefix}Forearm`, side * .01, -.39, .025);
+    add(`${prefix}Arm`, 'torso', side * .25, .32, 0);
+    add(`${prefix}Forearm`, `${prefix}Arm`, side * .17, -.27, 0);
+    add(`${prefix}Hand`, `${prefix}Forearm`, side * .005, -.34, .025);
     add(`${prefix}Leg`, 'hips', side * .16, -.02, 0);
     add(`${prefix}Shin`, `${prefix}Leg`, 0, -.29, 0);
     add(`${prefix}Foot`, `${prefix}Shin`, 0, -.28, .01);
@@ -322,12 +346,13 @@ export function createCharacterFactory() {
     }
     for (const x of [-.083, .083]) {
       const eye = new THREE.Mesh(eyeGeometry, blackMaterial);
-      eye.name = 'minimal-dot-eye'; eye.position.set(x, -.13, .327);
+      const faceDepth = HEAD.rz * Math.sqrt(1 - (x / HEAD.rx) ** 2 - (.13 / HEAD.ry) ** 2);
+      eye.name = 'minimal-dot-eye'; eye.position.set(x, -.13, faceDepth + .013);
       eye.scale.set(.015, .019, .011); rig.head.add(eye);
     }
     if (tie) {
       const necktie = new THREE.Mesh(tieGeometry, blackMaterial);
-      necktie.name = 'recruiter-necktie'; necktie.position.set(0, .29, .216); necktie.rotation.x = -.15;
+      necktie.name = 'recruiter-necktie'; necktie.position.set(0, .155, .188); necktie.rotation.x = -.25;
       rig.torso.add(necktie);
     }
     root.userData = {

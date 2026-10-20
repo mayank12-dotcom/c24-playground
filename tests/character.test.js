@@ -105,7 +105,7 @@ test('the soft silhouette has narrow relaxed shoulders and continuous unit norma
   assert.equal(character.userData.mesh.material.flatShading, false);
 });
 
-test('the neutral silhouette follows the supplied round-head, short-leg reference with low dot eyes', t => {
+test('the neutral silhouette follows the new large-head 3D reference with a compact body and low dot eyes', t => {
   const character = makeCharacter(t);
   const { mesh, rig } = character.userData;
   const point = new THREE.Vector3(), points = [];
@@ -121,19 +121,18 @@ test('the neutral silhouette follows the supplied round-head, short-leg referenc
   const headDepth = Math.max(...headPoints.map(item => item.z)) - Math.min(...headPoints.map(item => item.z));
   const width = bounds.max.x - bounds.min.x;
   const crotch = Math.min(...points.filter(item => Math.abs(item.x) < .018 && Math.abs(item.z) < .075).map(item => item.y));
-  // Measured from the supplied neutral front/back drawings: the round head is
-  // approximately .35 of the height, the widest relaxed arm span is .54, and
-  // the split between the short legs starts around .21 above the floor.
-  // Normalized bands tolerate meshing and view differences, without allowing
-  // the old small-head/long-leg proportions to return.
-  assert.ok(headWidth / height >= .34 && headWidth / height <= .38,
-    `reference head/height should be .34–.38; measured ${headWidth / height}`);
+  // The latest 3D reference replaces the earlier drawing's broad pear body:
+  // the round head is about .39 of the height, relaxed hands span about .46,
+  // and the exposed leg split starts around .28 above the floor.
+  // These bands describe the reference proportions rather than mesher constants.
+  assert.ok(headWidth / height >= .38 && headWidth / height <= .42,
+    `reference head/height should be .38–.42; measured ${headWidth / height}`);
   assert.ok(headDepth / headWidth >= .92 && headDepth / headWidth <= 1.04,
     `the round head should read as circular in profile too; depth/width ${headDepth / headWidth}`);
-  assert.ok(width / height >= .52 && width / height <= .57,
-    `reference relaxed width/height should be .52–.57; measured ${width / height}`);
-  assert.ok((crotch - bounds.min.y) / height >= .18 && (crotch - bounds.min.y) / height <= .23,
-    `reference leg split/height should be .18–.23; measured ${(crotch - bounds.min.y) / height}`);
+  assert.ok(width / height >= .43 && width / height <= .49,
+    `reference relaxed width/height should be .43–.49; measured ${width / height}`);
+  assert.ok((crotch - bounds.min.y) / height >= .25 && (crotch - bounds.min.y) / height <= .30,
+    `reference leg split/height should be .25–.30; measured ${(crotch - bounds.min.y) / height}`);
   const eyes = rig.head.children.filter(child => child.name === 'minimal-dot-eye');
   assert.equal(eyes.length, 2, 'the reference face has only two minimal dot eyes');
   for (const eye of eyes) {
@@ -151,6 +150,8 @@ test('the lightweight white body is one connected skin with valid limb influence
   assert.ok(mesh?.isSkinnedMesh, 'the body must deform with its skeleton, including its legs');
   assert.ok(['r', 'g', 'b'].every(channel => mesh.material.color[channel] > .9),
     'the shared character body remains white while accessories provide contrast');
+  assert.equal(mesh.material.map, null, 'the reference changes form without adding its photographed texture');
+  assert.equal(character.userData.outline.material.side, THREE.BackSide, 'the white body retains its continuous ink silhouette');
   const geometry = mesh.geometry;
   const vertices = geometry.getAttribute('position');
   const weights = geometry.getAttribute('skinWeight');

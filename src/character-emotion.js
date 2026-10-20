@@ -3,7 +3,6 @@ import * as THREE from 'three';
 // Only the two fighters receive these small overlays. Reuse their actual head
 // surface so the blush follows the smooth skin without another spherical blob.
 const sharedGeometry = new WeakMap();
-const HEAD_HEIGHT = 1.72;
 const clamp = value => Math.max(0, Math.min(1, value));
 
 // The dot eyes move with the reference sculpt. Project the small brow onto
@@ -28,7 +27,7 @@ function faceSurfaceDepth(body, x, y) {
   return Number.isFinite(front) ? front : .291;
 }
 
-function headGeometry(body) {
+function headGeometry(body, headHeight) {
   const source = body.attributes.position;
   const normal = body.attributes.normal;
   const index = body.index;
@@ -41,9 +40,9 @@ function headGeometry(body) {
     const next = positions.length / 3;
     const x = source.getX(original), y = source.getY(original), z = source.getZ(original);
     const nx = normal.getX(original), ny = normal.getY(original), nz = normal.getZ(original);
-    positions.push(x + nx * .0015, y - HEAD_HEIGHT + ny * .0015, z + nz * .0015);
+    positions.push(x + nx * .0015, y - headHeight + ny * .0015, z + nz * .0015);
     normals.push(nx, ny, nz);
-    const height = clamp((y - 1.58) / .34);
+    const height = clamp((y - (headHeight - .14)) / .34);
     const blend = height * height * (3 - 2 * height);
     color.copy(pale).lerp(warm, blend);
     colors.push(color.r, color.g, color.b);
@@ -55,7 +54,7 @@ function headGeometry(body) {
     const a = index ? index.getX(triangle) : triangle;
     const b = index ? index.getX(triangle + 1) : triangle + 1;
     const c = index ? index.getX(triangle + 2) : triangle + 2;
-    if (Math.min(source.getY(a), source.getY(b), source.getY(c)) < 1.60) continue;
+    if (Math.min(source.getY(a), source.getY(b), source.getY(c)) < headHeight - .12) continue;
     indices.push(add(a), add(b), add(c));
   }
   const geometry = new THREE.BufferGeometry();
@@ -70,13 +69,18 @@ function headGeometry(body) {
 
 /** A subtle, independently fading expression attached to an existing head. */
 export function createCharacterEmotion(character, { allResources } = {}) {
-  const head = character?.userData?.rig?.head;
+  const rig = character?.userData?.rig;
+  const head = rig?.head;
   const body = character?.userData?.mesh?.geometry;
   if (!head || !body) throw new TypeError('Character emotion requires a sculpted character rig.');
+  // The sculpt's head can change size or height independently of its feet.
+  // Read its bind position rather than the currently animated head transform.
+  const headHeight = ['hips', 'torso', 'head'].reduce((height, name) => height
+    + (rig.rest?.[name]?.position?.[1] ?? rig[name]?.position.y ?? 0), 0);
   let shared = sharedGeometry.get(body);
   if (!shared) {
     shared = {
-      tint: headGeometry(body),
+      tint: headGeometry(body, headHeight),
       brow: new THREE.BoxGeometry(.105, .015, .014),
       references: 0,
       registries: new Map(),
@@ -113,7 +117,7 @@ export function createCharacterEmotion(character, { allResources } = {}) {
     for (const dx of [-.0525, 0, .0525]) for (const dy of [-.0075, .0075]) {
       front = Math.max(front, faceSurfaceDepth(body,
         x + dx * Math.cos(brow.rotation.z) - dy * Math.sin(brow.rotation.z),
-        HEAD_HEIGHT + y + dx * Math.sin(brow.rotation.z) + dy * Math.cos(brow.rotation.z)));
+        headHeight + y + dx * Math.sin(brow.rotation.z) + dy * Math.cos(brow.rotation.z)));
     }
     brow.position.set(x, y, front + .008);
     root.add(brow);

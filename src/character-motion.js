@@ -3,9 +3,9 @@ import { SEAT_FORWARD_REACH } from './seat-exit.js';
 
 const TAU = Math.PI * 2;
 const STANCE = .54;
-// The skin extends below the hip bone. This places its visible underside just
-// above a .30-high cushion while the short lower legs stay on the ground.
-export const SEATED_HIP_HEIGHT = .555;
+// The compact reference body has a higher pelvis underside. Seat the actual
+// supporting skin just above a .30-high cushion; leg IK keeps both soles down.
+export const SEATED_HIP_HEIGHT = .485;
 export const SEATED_FOOT_REACH = SEAT_FORWARD_REACH;
 const SEATED_TYPING_ARM = -1.05;
 const RELAXED_ARM_X = -.025;
@@ -32,7 +32,7 @@ const TUMBLE_POSE={
 const TUMBLE_SUPPORTS=[['hips',.25],['torso',.27],['head',.34],['leftArm',.10],['rightArm',.10],['leftForearm',.10],['rightForearm',.10],['leftHand',.11],['rightHand',.11],['leftShin',.10],['rightShin',.10],['leftFoot',.105],['rightFoot',.105]];
 const FIGHT_FLOOR_POSE={
   hips:{position:[.025,.31,-.08],rotation:[-.42,.08,1.46]},
-  torso:{rotation:[.18,.04,-.08]},head:{rotation:[.12,-.08,-.05]},
+  torso:{rotation:[.18,.04,-.055]},head:{rotation:[.12,-.08,-.05]},
   leftArm:{rotation:[-.42,.1,.4]},rightArm:{rotation:[-.35,-.1,-.55]},
   leftForearm:{rotation:[-1.2,0,.1]},rightForearm:{rotation:[-1.2,0,-.12]},
   leftHand:{rotation:[.08,0,0]},rightHand:{rotation:[.08,0,0]},

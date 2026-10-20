@@ -1,8 +1,8 @@
 # Prototype verification
 
-Current release: version 42, all-furniture seating. The newest section at the end of this file records its scope and pending final release verification. Earlier sections are chronological evidence and can describe superseded bot counts, controls, and layouts.
+Current release: version 51, the latest 3D character reference. The newest section records current checks. Earlier sections are historical evidence and can describe superseded proportions, bot counts, controls and layouts.
 
-Interactive browser review remains unavailable. This file does not claim a version 42 Vercel deployment.
+Interactive browser review remains unavailable. This file does not claim a new Vercel deployment.
 
 ## Evidence and scope
 
@@ -1391,3 +1391,63 @@ One 82 by 80 floor now joins all eight departments/lounge/information rooms, nin
 **128 focused automated checks across 14 files passed.** New office tests verify full floor containment, all new fixture/shell geometry and collisions, all fully furnished doorways, all 47 seat routes plus final transfer/lowering, and all 19 bots across their cycle. Existing layout/station/crowd/cozy/social/info/furniture/garden-render/seating-presence tests pass. The only changed old expectation replaced required outdoor lawns with one continuous office floor; no physical clearance tolerance or rendering budget was loosened. Five reported actual-world contact/physical checks pass, including all three side/back contact subcases and every defined actual skinned job entry/exit approach. Main/sidebar and standalone font/CSS/header/audio/JS tests pass. Production compilation succeeds with the existing nonfatal bundle-size warning.
 
 The actual createWorld scene was exported for an offline still study with nine real stations, 938 tinted instances and 58 skinned meshes. The two-panel office-v48-preview.png was visually reviewed for the layout, surfaces and gross intersections. It uses the inspection renderer's lighting, not WebGL lighting, and is not a browser screenshot. The 114 MB regenerable JSON is omitted from the portable ZIP; its exporter and PNG are included. No exact live-reference appearance, browser interaction/listening or Vercel deployment is claimed. The final HTML retains the corrected parsed-font export, all ten audio assets, the original UI, and the 1280px desktop guard; archive integrity is verified through extraction and SHA256 checks.
+
+## Version 51 — dimensional character reference
+
+The latest supplied 3D mannequin replaces the earlier drawing's form. Every
+character now has a spherical head about 40.0% of standing height, a compact
+tapered torso, slimmer relaxed arms, rounded mitten ends, more exposed legs and
+small rounded feet. The pure-white body and dark ink outline remain; no stock
+texture or external model is used. Dot eyes, optional hair caps, recruiter ties
+and the fighters' brows/blush fit the new proportions.
+
+The skin remains one closed connected mesh with normalized influences and
+continuous field normals: 6,784 vertices and 13,564 triangles, or 27,956 triangles
+including its outline, hair and tie. Bounded surface projection softens the
+marching-tetrahedron silhouette without adding triangles. A gradual anatomical
+shoulder blend removes an abrupt chest-to-arm influence change found by the
+strict fall/recovery checks. The .24 maximum deformation-edge limit and .04
+visible shoulder-bridge thickness remain unchanged. The narrower reference uses
+rig-relative bridge probes; lower-arm checks also require visible torso and
+forearm on either side of the actual gap.
+
+The shared seated hip height is .485 so the actual supporting skin reaches
+about .3215 above the .30 cushion, with both solved ankles at .11 and hands clear
+of the oval desk. Lowering, sitting, rising and interrupted transfers share this
+supported pose. The resting fight torso is 1.43 degrees flatter for the larger
+head; the final head maximum is .9446, and the low kick still meets actual skin.
+No floor, contact or furniture-clearance tolerance was loosened.
+
+Final verification:
+
+- Direct collision and shoulder reporters captured 23/23 passing cases.
+- Main coordination and standalone export reporters captured 54/54 passing cases.
+- Character, fight-motion, footfall-motion and emotion commands all exited zero
+  on the frozen source, covering 46 declared test cases. Their first reporter
+  output was lost through child-process pipes; the proof summary distinguishes
+  declared counts from captured counts. An additional real-file-descriptor run
+  captured footfall 12/12. No aggregate reporter total is claimed for the four
+  original commands. Before/after/current source fingerprints match.
+- Seven selected actual-world cases pass with unchanged source fingerprints:
+  all new lounge cushions and neighboring bodies, five-sided job-chair entry
+  and exit, both beanbag facings, remote heartbeat/seat continuity, all nineteen
+  bots remaining solid and visible, all three bot-to-chair handoffs, and one
+  complete fight with physical contacts, reactions and synchronized impacts.
+  The complete world suite was not rerun.
+- Production compilation and the persistent standalone exporter pass. All ten
+  embedded audio files match source bytes. The original navigation, controls,
+  office, audio and presence/API files match baseline 2c9259a7; 64 protected
+  runtime/config files were independently checked byte for byte.
+
+`artifacts/character-reference-v51.png` shows eight actual posed mesh views:
+front, back, profile, walking, three-quarter, pushing, seated recruiter and an
+optional hairstyle. These were rendered and inspected offline. A fresh export
+against the final motion source produced the same eight poses, confirming that
+the last fight-only adjustment did not stale the preview. The small companion
+report records geometry measurements and source/image hashes.
+
+The standalone and portable/Vercel source ZIPs use the current persistent CSS
+exporter, preserving full font imports and the original navigation. Archive
+entry hashes are verified. HTTP serving could not be tested because the sandbox
+denied a loopback socket. No hands-on browser test, live Redis verification or
+new Vercel deployment is claimed. Earlier sections and test totals are historical.
