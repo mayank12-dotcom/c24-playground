@@ -1,0 +1,21 @@
+# Vercel rebuilds dependencies and production output from source.
+node_modules/
+dist/
+
+# Local verification, portable exports, and offline rendering data.
+artifacts/
+tests/
+scripts/
+verification/
+*.html.zip
+*.zip
+*.md
+server.mjs
+
+# Credentials, local project links, and tool state never belong in an upload.
+.env
+.env.*
+.vercel/
+.openai/
+.git/
+.DS_Store

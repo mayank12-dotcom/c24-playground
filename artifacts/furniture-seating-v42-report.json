@@ -1,0 +1,80 @@
+{
+  "output": "/workspace/hiring-world/artifacts/furniture-seating-v42.json",
+  "frames": [
+    {
+      "label": "GARDEN SOFA / TWO SEATS",
+      "seatIds": [
+        "garden-prop-0-seat-0",
+        "garden-prop-0-seat-1"
+      ],
+      "meshes": 28
+    },
+    {
+      "label": "ARMCHAIR / GROUNDED FEET",
+      "seatIds": [
+        "garden-prop-2-seat-0"
+      ],
+      "meshes": 18
+    },
+    {
+      "label": "GARDEN OTTOMAN",
+      "seatIds": [
+        "garden-prop-9-seat-0"
+      ],
+      "meshes": 11
+    },
+    {
+      "label": "ROTATED SOFA / SHARED SEATS",
+      "seatIds": [
+        "garden-prop-22-seat-0",
+        "garden-prop-22-seat-1"
+      ],
+      "meshes": 28
+    },
+    {
+      "label": "ARRIVAL LOUNGE SOFA",
+      "seatIds": [
+        "cozy-sofa-6-seat-0",
+        "cozy-sofa-6-seat-1"
+      ],
+      "meshes": 24
+    },
+    {
+      "label": "BEANBAG / FRONT SUPPORT",
+      "seatIds": [
+        "cozy-beanbag-0-seat-0"
+      ],
+      "meshes": 8
+    },
+    {
+      "label": "INFORMATION ROOM SOFA",
+      "seatIds": [
+        "class24-lounge-sofa--1-seat-0",
+        "class24-lounge-sofa--1-seat-1"
+      ],
+      "meshes": 23
+    },
+    {
+      "label": "SOCIAL ROOM OTTOMAN",
+      "seatIds": [
+        "social-ottoman-common-seat-0"
+      ],
+      "meshes": 7
+    }
+  ],
+  "note": "Actual runtime furniture and deformed bodies exported for eight offline pose renders. Browser interaction unverified.",
+  "source_sha256": {
+    "src/character.js": "082e885a5219a5ba0badbb30b6eb2ecce15093f07c29e535e96e314d2c481007",
+    "src/character-motion.js": "2676e78374bc22e3b05044273ab216958da80fcff7ac03cbb7feee6e938582d1",
+    "src/garden-space.js": "082faef8883967b433bf2e8df89fca61e36ad0040a594a55626bc203ca7b42cf",
+    "src/garden-layout.js": "865497433170cc9e688413f98accaac89b2be271b70a4672e284cf1f59963705",
+    "src/cozy-space.js": "f82cbb214f0d861753eb7ca4d5621c5892c5a8ea8a67cdac07ee527631113e0f",
+    "src/lounge-layout.js": "533662f95e4abc2bd1ca013507154019a93d3c25ad81ac23c5769945bf975365",
+    "src/social-space.js": "6beb0aa70b32ef3c5281ba7be8a9d734c33125eb9f9b994b56d5cce9cb4f5e5a",
+    "src/social-layout.js": "293149585a43c458a8cac7fd9233aa677ca27f3721e0a7862694781da389b593",
+    "src/info-room.js": "84b6d5fee670fd3bd84f1d443c85426f835dcb7b1a9c037ecee826a09d637462",
+    "src/furniture-seats.js": "f07ba73386961e0925e943ddf9c8e73156f0a1d0fec6f9177bc9592d01a90b7b",
+    "scripts/preview-furniture-seats.mjs": "14ea571a2af11166fe44f4411cf99b01a6452326298c419f12fe2120d47044f2"
+  },
+  "preview_sha256": "9aa49113708305d14b3163de63bc6c06517a1d23918c414be0b9448be4efe348"
+}

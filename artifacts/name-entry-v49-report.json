@@ -1,0 +1,17 @@
+{
+  "version": 49,
+  "feature": "First-visit display name and browser persistence",
+  "storage": "localStorage",
+  "storageKey": "common-ground.visitor-name.v1",
+  "maximumUnicodeCodePoints": 32,
+  "automatedTests": 113,
+  "testFiles": 10,
+  "productionBuild": "passed",
+  "entryGate": "Create world and live visitor only after accepting a valid name or restoring a cached name",
+  "sharedPresence": "Names retained across movement, seating, memory and Redis updates; older clients remain compatible",
+  "storageDenied": "Name retained for current visit in memory",
+  "review": "Independent static integration review found no actionable correctness issue",
+  "browserPlaytest": false,
+  "liveRedisVerification": false,
+  "deployedByAssistant": false
+}

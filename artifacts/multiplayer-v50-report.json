@@ -1,0 +1,16 @@
+{
+  "version": 50,
+  "purpose": "Real candidates share named avatars through the existing visitor API",
+  "movingPublicationIntervalMs": 250,
+  "idleHeartbeatIntervalMs": 1000,
+  "visitorExpiryMs": 25000,
+  "sharedStorage": "One shared Redis REST database, configured on the Vercel server",
+  "sourceRequired": "Deploy api/world.js along with the frontend, rather than dist alone",
+  "change": "Explicit live-visitors-unavailable navbar status and recovery indication",
+  "automatedChecks": 88,
+  "testFiles": 5,
+  "redisLuaExecution": false,
+  "liveDeploymentInspected": false,
+  "twoPhysicalComputersVerified": false,
+  "deployedByAssistant": false
+}

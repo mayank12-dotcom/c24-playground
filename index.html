@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f5ef" />
+    <meta name="description" content="A little world of big possibilities. Walk up, take a seat, and find your next role." />
+    <title>Common Ground — Find your next seat</title>
+    <link rel="stylesheet" href="/viewport.css" />
+  </head>
+  <body>
+    <section id="viewport-notice" aria-label="Desktop screen required">
+      <span class="eyebrow">COMMON GROUND</span>
+      <h1>Please use desktop for a better experience.</h1>
+    </section>
+    <div id="app">
+      <dialog id="visitor-name-dialog" class="visitor-name-dialog" aria-labelledby="visitor-name-title" aria-describedby="visitor-name-intro" closedby="none">
+        <div class="visitor-name-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4M5 16v4m14-4v4M6 10a2 2 0 0 0-4 0v5a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-5a2 2 0 0 0-4 0v2H6v-2Z"/></svg></div>
+        <span class="eyebrow">MAKE YOURSELF AT HOME</span>
+        <h1 id="visitor-name-title">What should we call you?</h1>
+        <p id="visitor-name-intro" class="visitor-name-intro">A new face, a new possibility. Introduce yourself before you explore the office.</p>
+        <form id="visitor-name-form" novalidate>
+          <label for="visitor-name-input">Your name</label>
+          <input id="visitor-name-input" name="name" type="text" autocomplete="given-name" placeholder="Enter your name" aria-describedby="visitor-name-hint visitor-name-error" required autofocus />
+          <p id="visitor-name-hint" class="visitor-name-hint">Other visitors can see your name. We’ll remember it on this device.</p>
+          <p id="visitor-name-error" class="visitor-name-error" aria-live="polite"></p>
+          <button id="visitor-name-submit" class="visitor-name-submit" type="submit">Enter office <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+        </form>
+      </dialog>
+      <main class="workspace">
+        <section class="world-wrap" aria-label="Explore the hiring world">
+          <div id="world"></div>
+          <header class="masthead">
+            <a class="brand" href="/" aria-label="Common Ground home"><span class="brand-mark" aria-hidden="true"><i data-lucide="armchair"></i></span><span>common ground<span class="brand-period">.</span></span></a>
+            <div class="world-status"><span class="status-dot"></span><span id="presence-status">Joining the world…</span></div>
+            <nav class="nav-actions" aria-label="Main navigation">
+              <button class="help-button" id="info-room-toggle" aria-label="Walk to Class 24"><span>Class 24</span><i data-lucide="arrow-up-right"></i></button>
+              <button class="help-button" id="help-toggle" aria-label="Show movement controls" aria-controls="controls-help" aria-expanded="false"><i data-lucide="keyboard"></i><span>How to Explore</span></button>
+              <button class="appearance-button" id="shuffle-look"><i data-lucide="shuffle"></i><span>A fresh look</span></button>
+              <button class="help-button music-button" id="music-toggle" type="button" aria-pressed="true" aria-label="Mute all sounds" title="Mute all sounds">
+                <svg id="music-icon-on" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m11 5-6 4H2v6h3l6 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+                <svg id="music-icon-off" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" hidden><path d="m11 5-6 4H2v6h3l6 4V5Z"/><path d="m17 9 5 6m0-6-5 6"/></svg>
+                <span id="music-label">Sound on</span>
+              </button>
+            </nav>
+          </header>
+          <div id="world-notice" class="world-notice" role="status" aria-live="polite"></div>
+          <div id="near-prompt" class="near-prompt" hidden><div><strong id="near-title"></strong><span id="near-company"></span></div><button id="view-role" class="dark-button">View role <i data-lucide="arrow-up-right"></i></button></div>
+          <div id="seated-nudge" class="seated-nudge" role="status" aria-live="polite" hidden><span id="seated-nudge-label"></span><button id="reopen-job" class="dark-button">Open job description <i data-lucide="arrow-up-right"></i></button></div>
+          <section id="opportunity-panel" class="opportunity-panel" aria-labelledby="opportunity-title" hidden>
+            <div class="panel-heading"><h2 id="opportunity-title">Your Current Next Chapter</h2><button id="panel-close" aria-label="Close Your Current Next Chapter"><i data-lucide="x"></i></button></div>
+            <aside id="sidebar" aria-label="Jobs and application conversations"></aside>
+            <aside id="info-sidebar" aria-label="Class 24 information" hidden></aside>
+          </section>
+          <button id="seats-toggle" class="seats-fab" aria-controls="opportunity-panel" aria-expanded="false" aria-label="Open Your Current Next Chapter: available seats"><i data-lucide="armchair"></i><span id="world-count">6 available seats</span></button>
+          <div class="world-controls" role="group" aria-label="Camera controls"><button id="recenter" aria-label="Return camera to your character" title="Find me"><i data-lucide="locate-fixed"></i></button><span class="control-separator"></span><button id="zoom-in" aria-label="Zoom in"><i data-lucide="plus"></i></button><span class="zoom-label">ZOOM</span><button id="zoom-out" aria-label="Zoom out"><i data-lucide="minus"></i></button></div>
+          <div id="controls-help" class="controls-help" role="region" aria-label="How to Explore" hidden><div class="help-heading"><strong>Make yourself at home.</strong><button id="help-close" aria-label="Close controls"><i data-lucide="x"></i></button></div><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to walk</p><p>Double-click the ground to walk there</p><p><i data-lucide="move"></i> Drag to turn · Gentle camera follow</p><p><i data-lucide="zoom-in"></i> Scroll or pinch to zoom</p><p><kbd>Space</kbd> Push a seated bot, then take its chair</p><small>Make yourself comfortable on any free chair, couch, beanbag, or ottoman. Walk up to or touch a free seat to sit automatically. Your character takes a clear path around its back and arms; sofas have room for two. Job details open once you’re seated at a job table. Movement keys get you up before walking. Closing the job window keeps your seat; use the bottom nudge to reopen it. Visit Class 24 and click an information object when you’re close. Use A fresh look to add or change your hair.</small></div>
+          <div id="loading" class="loading-state"><span class="eyebrow">COMMON GROUND</span><strong>Finding you a place…</strong></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/bootstrap.js"></script>
+  </body>
+</html>

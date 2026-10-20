@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+.vercel/
+.openai/
+
+# Recreate these offline geometry dumps with the included preview scripts.
+/artifacts/office-v48.json
+/artifacts/furniture-seating-v42.json
+/artifacts/character-preview.json
+
+# Generated portable releases and local tool caches.
+*.zip
+/common-ground*.html
+/prototype.html
+__pycache__/
+*.py[cod]
+.cache/
+.tools/

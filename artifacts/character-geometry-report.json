@@ -1,0 +1,843 @@
+{
+  "version": 36,
+  "note": "Actual procedural white character skin and outline; measurements use deformed Three.js vertices and rays. Offline geometry inspection; browser interaction unverified.",
+  "sourceSha256": "082e885a5219a5ba0badbb30b6eb2ecce15093f07c29e535e96e314d2c481007",
+  "geometry": {
+    "body": {
+      "vertices": 6656,
+      "triangles": 13308
+    },
+    "outline": {
+      "vertices": 6656,
+      "triangles": 13308
+    }
+  },
+  "referenceProportions": {
+    "neutral": {
+      "height": 2.0675738603919744,
+      "width": 1.0993994120429291,
+      "headWidth": 0.7376947402954102,
+      "headDepth": 0.7081097662448883,
+      "headToHeight": 0.35679244859264986,
+      "headProfileToFront": 0.9598953707617943,
+      "widthToHeight": 0.5317340449615198,
+      "legSplitToHeight": 0.200413799754752,
+      "eyes": [
+        {
+          "position": [
+            -0.083,
+            1.5779999999999998,
+            0.327
+          ],
+          "fractionDownHead": 0.6772094646742399
+        },
+        {
+          "position": [
+            0.083,
+            1.5779999999999998,
+            0.327
+          ],
+          "fractionDownHead": 0.6772094646742399
+        }
+      ]
+    }
+  },
+  "shoulderSurface": {
+    "bridgeSamples": 48,
+    "minimumBridgeDepth": 0.14752241698552793,
+    "requiredMinimumDepth": 0.04,
+    "bridgeBand": {
+      "x": [
+        0.28,
+        0.38
+      ],
+      "y": [
+        1.14,
+        1.2
+      ]
+    },
+    "lowerArmGapSamples": 6,
+    "maximumLowerArmGapDepth": 0
+  },
+  "deformation": {
+    "original29": {
+      "count": 29,
+      "maxima": {
+        "continuous-white-body": {
+          "length": 0.19204558777414651,
+          "pose": "desk gesture 7",
+          "indices": [
+            2980,
+            3236
+          ]
+        },
+        "continuous-body-outline": {
+          "length": 0.19828704063879665,
+          "pose": "desk gesture 7",
+          "indices": [
+            2980,
+            3236
+          ]
+        }
+      }
+    },
+    "additionalActivePoses": {
+      "count": 76,
+      "maxima": {
+        "continuous-white-body": {
+          "length": 0.22725737892242534,
+          "pose": "right punch 4",
+          "indices": [
+            2980,
+            3236
+          ]
+        },
+        "continuous-body-outline": {
+          "length": 0.23475194072622627,
+          "pose": "right punch 4",
+          "indices": [
+            2980,
+            3236
+          ]
+        }
+      }
+    },
+    "poses": [
+      {
+        "name": "push 0",
+        "maxima": {
+          "continuous-white-body": 0.10490602538341129,
+          "continuous-body-outline": 0.12341267883396365
+        }
+      },
+      {
+        "name": "push 0.1",
+        "maxima": {
+          "continuous-white-body": 0.1300379495621769,
+          "continuous-body-outline": 0.13226189085654796
+        }
+      },
+      {
+        "name": "push 0.2",
+        "maxima": {
+          "continuous-white-body": 0.15359005559679054,
+          "continuous-body-outline": 0.15809839413250545
+        }
+      },
+      {
+        "name": "push 0.3",
+        "maxima": {
+          "continuous-white-body": 0.1720861926872987,
+          "continuous-body-outline": 0.17688270080662138
+        }
+      },
+      {
+        "name": "push 0.4",
+        "maxima": {
+          "continuous-white-body": 0.1832924987059565,
+          "continuous-body-outline": 0.18817972045992368
+        }
+      },
+      {
+        "name": "push 0.5",
+        "maxima": {
+          "continuous-white-body": 0.1869983303787204,
+          "continuous-body-outline": 0.19190351532950395
+        }
+      },
+      {
+        "name": "push 0.6",
+        "maxima": {
+          "continuous-white-body": 0.1837500960686314,
+          "continuous-body-outline": 0.18865271353513852
+        }
+      },
+      {
+        "name": "push 0.7",
+        "maxima": {
+          "continuous-white-body": 0.17313167462623147,
+          "continuous-body-outline": 0.1779619980202319
+        }
+      },
+      {
+        "name": "push 0.8",
+        "maxima": {
+          "continuous-white-body": 0.15411520371336807,
+          "continuous-body-outline": 0.15863616066716915
+        }
+      },
+      {
+        "name": "push 0.9",
+        "maxima": {
+          "continuous-white-body": 0.13003794956217685,
+          "continuous-body-outline": 0.13226189085654796
+        }
+      },
+      {
+        "name": "push 1",
+        "maxima": {
+          "continuous-white-body": 0.10490602538341129,
+          "continuous-body-outline": 0.12341267883396365
+        }
+      },
+      {
+        "name": "desk gesture 0",
+        "maxima": {
+          "continuous-white-body": 0.17851282837135005,
+          "continuous-body-outline": 0.18334520139098895
+        }
+      },
+      {
+        "name": "desk gesture 1",
+        "maxima": {
+          "continuous-white-body": 0.1821841354119193,
+          "continuous-body-outline": 0.18846250950751844
+        }
+      },
+      {
+        "name": "desk gesture 2",
+        "maxima": {
+          "continuous-white-body": 0.19042876455571695,
+          "continuous-body-outline": 0.19657987904569849
+        }
+      },
+      {
+        "name": "desk gesture 3",
+        "maxima": {
+          "continuous-white-body": 0.18992504092885118,
+          "continuous-body-outline": 0.19608490104854082
+        }
+      },
+      {
+        "name": "desk gesture 4",
+        "maxima": {
+          "continuous-white-body": 0.18136640048783814,
+          "continuous-body-outline": 0.18765583679527087
+        }
+      },
+      {
+        "name": "desk gesture 5",
+        "maxima": {
+          "continuous-white-body": 0.17851199651146804,
+          "continuous-body-outline": 0.1834383930728522
+        }
+      },
+      {
+        "name": "desk gesture 6",
+        "maxima": {
+          "continuous-white-body": 0.18383344184464842,
+          "continuous-body-outline": 0.19016316065657946
+        }
+      },
+      {
+        "name": "desk gesture 7",
+        "maxima": {
+          "continuous-white-body": 0.19204558777414651,
+          "continuous-body-outline": 0.19828704063879665
+        }
+      },
+      {
+        "name": "desk gesture 8",
+        "maxima": {
+          "continuous-white-body": 0.1904768589991491,
+          "continuous-body-outline": 0.19673845875255955
+        }
+      },
+      {
+        "name": "lounge gesture 0",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 1",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 2",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 3",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 4",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 5",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 6",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 7",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "lounge gesture 8",
+        "maxima": {
+          "continuous-white-body": 0.1620600052889329,
+          "continuous-body-outline": 0.16380642000672763
+        }
+      },
+      {
+        "name": "right punch 0",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "left punch 0",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "shove 0",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "tennis 0",
+        "maxima": {
+          "continuous-white-body": 0.11198153621351958,
+          "continuous-body-outline": 0.12158152347365626
+        }
+      },
+      {
+        "name": "fall 0",
+        "maxima": {
+          "continuous-white-body": 0.17851282837135005,
+          "continuous-body-outline": 0.18334520139098895
+        }
+      },
+      {
+        "name": "recovery 0",
+        "maxima": {
+          "continuous-white-body": 0.159690762531876,
+          "continuous-body-outline": 0.1549991524765349
+        }
+      },
+      {
+        "name": "groundedfight 0",
+        "maxima": {
+          "continuous-white-body": 0.10494110298773165,
+          "continuous-body-outline": 0.12341267845546275
+        }
+      },
+      {
+        "name": "right punch 1",
+        "maxima": {
+          "continuous-white-body": 0.1777614639498626,
+          "continuous-body-outline": 0.18320790439848145
+        }
+      },
+      {
+        "name": "left punch 1",
+        "maxima": {
+          "continuous-white-body": 0.1777896458858566,
+          "continuous-body-outline": 0.18316545482424845
+        }
+      },
+      {
+        "name": "shove 1",
+        "maxima": {
+          "continuous-white-body": 0.17777694656125836,
+          "continuous-body-outline": 0.18318904713410838
+        }
+      },
+      {
+        "name": "tennis 1",
+        "maxima": {
+          "continuous-white-body": 0.11196888485137742,
+          "continuous-body-outline": 0.12156146579547894
+        }
+      },
+      {
+        "name": "fall 1",
+        "maxima": {
+          "continuous-white-body": 0.17532284263148737,
+          "continuous-body-outline": 0.18098300914770457
+        }
+      },
+      {
+        "name": "recovery 1",
+        "maxima": {
+          "continuous-white-body": 0.15452940098672166,
+          "continuous-body-outline": 0.14967245916157337
+        }
+      },
+      {
+        "name": "groundedfight 1",
+        "maxima": {
+          "continuous-white-body": 0.1047292158352494,
+          "continuous-body-outline": 0.12297117696122323
+        }
+      },
+      {
+        "name": "right punch 2",
+        "maxima": {
+          "continuous-white-body": 0.19616761448190206,
+          "continuous-body-outline": 0.20339149912820126
+        }
+      },
+      {
+        "name": "left punch 2",
+        "maxima": {
+          "continuous-white-body": 0.19223582275150705,
+          "continuous-body-outline": 0.19726313053261102
+        }
+      },
+      {
+        "name": "shove 2",
+        "maxima": {
+          "continuous-white-body": 0.18796369829113102,
+          "continuous-body-outline": 0.19421116559291068
+        }
+      },
+      {
+        "name": "tennis 2",
+        "maxima": {
+          "continuous-white-body": 0.11196369211421643,
+          "continuous-body-outline": 0.12155311930228871
+        }
+      },
+      {
+        "name": "fall 2",
+        "maxima": {
+          "continuous-white-body": 0.16755757324062018,
+          "continuous-body-outline": 0.17471160482213735
+        }
+      },
+      {
+        "name": "recovery 2",
+        "maxima": {
+          "continuous-white-body": 0.14095824087807216,
+          "continuous-body-outline": 0.13867251620663712
+        }
+      },
+      {
+        "name": "groundedfight 2",
+        "maxima": {
+          "continuous-white-body": 0.10488223942318042,
+          "continuous-body-outline": 0.12182067236121885
+        }
+      },
+      {
+        "name": "right punch 3",
+        "maxima": {
+          "continuous-white-body": 0.2224669405856309,
+          "continuous-body-outline": 0.22997492369796882
+        }
+      },
+      {
+        "name": "left punch 3",
+        "maxima": {
+          "continuous-white-body": 0.21426962398207208,
+          "continuous-body-outline": 0.22101764630933166
+        }
+      },
+      {
+        "name": "shove 3",
+        "maxima": {
+          "continuous-white-body": 0.203038728796826,
+          "continuous-body-outline": 0.2086666458878917
+        }
+      },
+      {
+        "name": "tennis 3",
+        "maxima": {
+          "continuous-white-body": 0.11196848109052002,
+          "continuous-body-outline": 0.12372920357978802
+        }
+      },
+      {
+        "name": "fall 3",
+        "maxima": {
+          "continuous-white-body": 0.15800661576653038,
+          "continuous-body-outline": 0.16579659429849766
+        }
+      },
+      {
+        "name": "recovery 3",
+        "maxima": {
+          "continuous-white-body": 0.12271130723393463,
+          "continuous-body-outline": 0.13308502311215706
+        }
+      },
+      {
+        "name": "groundedfight 3",
+        "maxima": {
+          "continuous-white-body": 0.11220585957726568,
+          "continuous-body-outline": 0.1223263197357831
+        }
+      },
+      {
+        "name": "right punch 4",
+        "maxima": {
+          "continuous-white-body": 0.22725737892242534,
+          "continuous-body-outline": 0.23475194072622627
+        }
+      },
+      {
+        "name": "left punch 4",
+        "maxima": {
+          "continuous-white-body": 0.21865678317571202,
+          "continuous-body-outline": 0.22572034051870468
+        }
+      },
+      {
+        "name": "shove 4",
+        "maxima": {
+          "continuous-white-body": 0.20580678913953854,
+          "continuous-body-outline": 0.21130760901591383
+        }
+      },
+      {
+        "name": "tennis 4",
+        "maxima": {
+          "continuous-white-body": 0.11215650848945764,
+          "continuous-body-outline": 0.1261614260575684
+        }
+      },
+      {
+        "name": "fall 4",
+        "maxima": {
+          "continuous-white-body": 0.15113442271946972,
+          "continuous-body-outline": 0.1556474083115101
+        }
+      },
+      {
+        "name": "recovery 4",
+        "maxima": {
+          "continuous-white-body": 0.11545771370084086,
+          "continuous-body-outline": 0.1261416196113715
+        }
+      },
+      {
+        "name": "groundedfight 4",
+        "maxima": {
+          "continuous-white-body": 0.11994120840585504,
+          "continuous-body-outline": 0.13144319760425704
+        }
+      },
+      {
+        "name": "right punch 5",
+        "maxima": {
+          "continuous-white-body": 0.22342130796487358,
+          "continuous-body-outline": 0.23092842062377433
+        }
+      },
+      {
+        "name": "left punch 5",
+        "maxima": {
+          "continuous-white-body": 0.21513338357187212,
+          "continuous-body-outline": 0.22194428471300323
+        }
+      },
+      {
+        "name": "shove 5",
+        "maxima": {
+          "continuous-white-body": 0.20358862416776125,
+          "continuous-body-outline": 0.2091916829561474
+        }
+      },
+      {
+        "name": "tennis 5",
+        "maxima": {
+          "continuous-white-body": 0.11199478448592573,
+          "continuous-body-outline": 0.12661399217189923
+        }
+      },
+      {
+        "name": "fall 5",
+        "maxima": {
+          "continuous-white-body": 0.1495775390850791,
+          "continuous-body-outline": 0.14669118701545972
+        }
+      },
+      {
+        "name": "recovery 5",
+        "maxima": {
+          "continuous-white-body": 0.10911744926552704,
+          "continuous-body-outline": 0.1215649494291815
+        }
+      },
+      {
+        "name": "groundedfight 5",
+        "maxima": {
+          "continuous-white-body": 0.12679389674717914,
+          "continuous-body-outline": 0.13965552979910106
+        }
+      },
+      {
+        "name": "right punch 6",
+        "maxima": {
+          "continuous-white-body": 0.20125206746385488,
+          "continuous-body-outline": 0.20857415501434448
+        }
+      },
+      {
+        "name": "left punch 6",
+        "maxima": {
+          "continuous-white-body": 0.1962471895275755,
+          "continuous-body-outline": 0.2016036102775208
+        }
+      },
+      {
+        "name": "shove 6",
+        "maxima": {
+          "continuous-white-body": 0.19088534292623302,
+          "continuous-body-outline": 0.1970208331953746
+        }
+      },
+      {
+        "name": "tennis 6",
+        "maxima": {
+          "continuous-white-body": 0.11408422615951178,
+          "continuous-body-outline": 0.1291292916769198
+        }
+      },
+      {
+        "name": "fall 6",
+        "maxima": {
+          "continuous-white-body": 0.15282886287173125,
+          "continuous-body-outline": 0.14875382639588533
+        }
+      },
+      {
+        "name": "recovery 6",
+        "maxima": {
+          "continuous-white-body": 0.10327522389442031,
+          "continuous-body-outline": 0.12215883332009798
+        }
+      },
+      {
+        "name": "groundedfight 6",
+        "maxima": {
+          "continuous-white-body": 0.13193572120973013,
+          "continuous-body-outline": 0.14593509720868403
+        }
+      },
+      {
+        "name": "right punch 7",
+        "maxima": {
+          "continuous-white-body": 0.1789037550314644,
+          "continuous-body-outline": 0.18564704677283728
+        }
+      },
+      {
+        "name": "left punch 7",
+        "maxima": {
+          "continuous-white-body": 0.1794389302865452,
+          "continuous-body-outline": 0.1833755369721769
+        }
+      },
+      {
+        "name": "shove 7",
+        "maxima": {
+          "continuous-white-body": 0.17867375086923318,
+          "continuous-body-outline": 0.18453125115139116
+        }
+      },
+      {
+        "name": "tennis 7",
+        "maxima": {
+          "continuous-white-body": 0.1119949259296611,
+          "continuous-body-outline": 0.12661398147635328
+        }
+      },
+      {
+        "name": "fall 7",
+        "maxima": {
+          "continuous-white-body": 0.15748526303629692,
+          "continuous-body-outline": 0.15290713895054445
+        }
+      },
+      {
+        "name": "recovery 7",
+        "maxima": {
+          "continuous-white-body": 0.10193636236565719,
+          "continuous-body-outline": 0.12306240552374287
+        }
+      },
+      {
+        "name": "groundedfight 7",
+        "maxima": {
+          "continuous-white-body": 0.1350572020797467,
+          "continuous-body-outline": 0.14982198720087328
+        }
+      },
+      {
+        "name": "right punch 8",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "left punch 8",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "shove 8",
+        "maxima": {
+          "continuous-white-body": 0.1777614753748455,
+          "continuous-body-outline": 0.18316590513745498
+        }
+      },
+      {
+        "name": "tennis 8",
+        "maxima": {
+          "continuous-white-body": 0.1119815362135196,
+          "continuous-body-outline": 0.12158152347365626
+        }
+      },
+      {
+        "name": "fall 8",
+        "maxima": {
+          "continuous-white-body": 0.159690762531876,
+          "continuous-body-outline": 0.1549991524765349
+        }
+      },
+      {
+        "name": "recovery 8",
+        "maxima": {
+          "continuous-white-body": 0.10490602538341129,
+          "continuous-body-outline": 0.12341267883396365
+        }
+      },
+      {
+        "name": "groundedfight 8",
+        "maxima": {
+          "continuous-white-body": 0.13612388489195004,
+          "continuous-body-outline": 0.15116889754434457
+        }
+      },
+      {
+        "name": "walking 60",
+        "maxima": {
+          "continuous-white-body": 0.1375494309002477,
+          "continuous-body-outline": 0.15298901454178093
+        }
+      },
+      {
+        "name": "walking 70",
+        "maxima": {
+          "continuous-white-body": 0.12494369091340579,
+          "continuous-body-outline": 0.13267497293137526
+        }
+      },
+      {
+        "name": "walking 80",
+        "maxima": {
+          "continuous-white-body": 0.16301414995302832,
+          "continuous-body-outline": 0.16391276821437017
+        }
+      },
+      {
+        "name": "walking 90",
+        "maxima": {
+          "continuous-white-body": 0.13737323159906098,
+          "continuous-body-outline": 0.15276260443937445
+        }
+      },
+      {
+        "name": "walking 100",
+        "maxima": {
+          "continuous-white-body": 0.14093135901147918,
+          "continuous-body-outline": 0.1506363906171102
+        }
+      },
+      {
+        "name": "walking 110",
+        "maxima": {
+          "continuous-white-body": 0.16766577676056318,
+          "continuous-body-outline": 0.16864856530515607
+        }
+      },
+      {
+        "name": "walking 120",
+        "maxima": {
+          "continuous-white-body": 0.13919069256460584,
+          "continuous-body-outline": 0.1530054609822328
+        }
+      },
+      {
+        "name": "walking 130",
+        "maxima": {
+          "continuous-white-body": 0.13880728348513427,
+          "continuous-body-outline": 0.14832774963397896
+        }
+      },
+      {
+        "name": "walking 140",
+        "maxima": {
+          "continuous-white-body": 0.16967034228767985,
+          "continuous-body-outline": 0.1706574387519218
+        }
+      },
+      {
+        "name": "walking 150",
+        "maxima": {
+          "continuous-white-body": 0.13904787320250495,
+          "continuous-body-outline": 0.15283562958613778
+        }
+      },
+      {
+        "name": "walking 160",
+        "maxima": {
+          "continuous-white-body": 0.13033916145569271,
+          "continuous-body-outline": 0.13894728071950663
+        }
+      },
+      {
+        "name": "walking 170",
+        "maxima": {
+          "continuous-white-body": 0.17097602826346003,
+          "continuous-body-outline": 0.17194228045979737
+        }
+      },
+      {
+        "name": "walking 180",
+        "maxima": {
+          "continuous-white-body": 0.14002760548397733,
+          "continuous-body-outline": 0.15400989231709014
+        }
+      }
+    ]
+  }
+}

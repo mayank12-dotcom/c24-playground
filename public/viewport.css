@@ -1,0 +1,21 @@
+/* The small-screen notice must work before, or without, the game JavaScript. */
+#viewport-notice { display: none; }
+@media (width < 1280px) {
+  html, body { margin: 0; background: #f7f6f1; color: #24251f; }
+  #app { display: none !important; }
+  #viewport-notice {
+    box-sizing: border-box;
+    display: flex !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 32px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+  #viewport-notice .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #777d68; }
+  #viewport-notice h1 { max-width: 480px; margin: 0; font-size: 30px; line-height: 1.25; letter-spacing: -1px; }
+}

@@ -1,0 +1,66 @@
+{
+  "version": 48,
+  "environment": "large-office",
+  "continuousFloor": {
+    "x": 0,
+    "z": -4,
+    "width": 82,
+    "depth": 80
+  },
+  "departmentCount": 8,
+  "jobStations": 9,
+  "publicSeats": 47,
+  "ambientCharacters": 19,
+  "perimeterWalls": 4,
+  "officeFixtures": [
+    {
+      "id": "office-reception",
+      "kind": "reception",
+      "x": -22,
+      "z": 27
+    },
+    {
+      "id": "office-cafe-counter",
+      "kind": "cafe-counter",
+      "x": 30,
+      "z": 19
+    },
+    {
+      "id": "office-back-storage",
+      "kind": "storage",
+      "x": 0,
+      "z": -41
+    },
+    {
+      "id": "office-left-storage",
+      "kind": "storage",
+      "x": -38.5,
+      "z": -33
+    },
+    {
+      "id": "office-right-storage",
+      "kind": "storage",
+      "x": 38.5,
+      "z": -3
+    },
+    {
+      "id": "office-printer",
+      "kind": "printer",
+      "x": 37.8,
+      "z": -17
+    }
+  ],
+  "staticDrawBatches": 46,
+  "staticInstances": 938,
+  "materialTypes": [
+    "MeshLambertMaterial"
+  ],
+  "routesAndTransfers": "All47public-seat routes and final transfers pass in office-layout.test.js",
+  "physicalSeating": "Actual skinned job entry/exit from every defined approach passes; side/back automatic chair contact passes",
+  "preview": {
+    "image": "office-v48-preview.png",
+    "source": "Actual createWorld geometry and material colors; offline Blender inspection lighting",
+    "liveWebGLAndBrowserVerified": false,
+    "referenceVisualMatchVerified": false
+  }
+}

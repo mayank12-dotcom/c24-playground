@@ -1,0 +1,64 @@
+{
+  "source": "freesound_community-concrete-footsteps-1-6265.mp3",
+  "source_duration_seconds": 7.584,
+  "source_decoded_sample_rate": 24000,
+  "format": "mono 22050 Hz signed PCM16 WAV",
+  "target_peak": 0.42,
+  "attack_fade_seconds": 0.0008,
+  "tail_fade_seconds": 0.035,
+  "samples": [
+    {
+      "file": "public/audio/step-1.wav",
+      "source_start_seconds": 0.298542,
+      "duration_seconds": 0.3,
+      "size_bytes": 13274,
+      "peak": 0.419983,
+      "rms": 0.031306,
+      "contact_onset_seconds": 0.001995,
+      "peak_dbfs": -7.535,
+      "gain_db": 3.83,
+      "first_pcm_sample": 0,
+      "last_pcm_sample": 0
+    },
+    {
+      "file": "public/audio/step-2.wav",
+      "source_start_seconds": 1.641542,
+      "duration_seconds": 0.32,
+      "size_bytes": 14156,
+      "peak": 0.419983,
+      "rms": 0.022941,
+      "contact_onset_seconds": 0.001678,
+      "peak_dbfs": -7.535,
+      "gain_db": 10.468,
+      "first_pcm_sample": 0,
+      "last_pcm_sample": 0
+    },
+    {
+      "file": "public/audio/step-3.wav",
+      "source_start_seconds": 4.136833,
+      "duration_seconds": 0.3,
+      "size_bytes": 13274,
+      "peak": 0.419983,
+      "rms": 0.02627,
+      "contact_onset_seconds": 0.001995,
+      "peak_dbfs": -7.535,
+      "gain_db": 5.008,
+      "first_pcm_sample": 0,
+      "last_pcm_sample": 0
+    },
+    {
+      "file": "public/audio/step-4.wav",
+      "source_start_seconds": 6.088125,
+      "duration_seconds": 0.34,
+      "size_bytes": 15038,
+      "peak": 0.419983,
+      "rms": 0.038567,
+      "contact_onset_seconds": 0.001905,
+      "peak_dbfs": -7.535,
+      "gain_db": 5.417,
+      "first_pcm_sample": 0,
+      "last_pcm_sample": 0
+    }
+  ],
+  "total_bytes": 55742
+}

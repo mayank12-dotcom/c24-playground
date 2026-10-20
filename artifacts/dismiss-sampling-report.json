@@ -1,0 +1,42 @@
+{
+  "source_file_name": "oxidvideos-transition-sfx-whoosh-sound-effect-407576.mp3",
+  "source_size_bytes": 38400,
+  "source_sha256": "0c8492cf1c966da347ebf7444ec2f07e7d6609e22936f8564089ff72d0317557",
+  "source_duration_seconds": 1.2,
+  "source_sample_rate": 48000,
+  "source_channels": 2,
+  "source_codec": "mp3",
+  "source_bit_rate": 256000,
+  "runtime_file": "public/audio/dismiss.wav",
+  "source_start_seconds": 0.022,
+  "source_end_seconds": 0.752,
+  "duration_seconds": 0.7299773242630385,
+  "size_bytes": 32236,
+  "sample_rate": 22050,
+  "channels": 1,
+  "codec": "pcm_s16le",
+  "peak": 0.419983,
+  "peak_dbfs": -7.535,
+  "rms": 0.044822,
+  "gain_db": -2.579,
+  "attack_fade_seconds": 0.002,
+  "tail_fade_seconds": 0.035,
+  "onset_above_0_001_seconds": 0.002222,
+  "onset_above_0_01_seconds": 0.006122,
+  "first_pcm_sample": 0,
+  "last_pcm_sample": 0,
+  "retained_source_energy_percent": 99.999878,
+  "runtime_sha256": "37b5328ae8d9569933f431fcdb2f52cd511503125991e26da264b5798429b4eb",
+  "sampling_decisions": [
+    "Trimmed 22 ms before the first meaningful source rise.",
+    "Retained the initial rush, main peak, and natural fading tail through 752 ms.",
+    "Discarded only near-silent source decay after 752 ms; no time stretching or pitch change.",
+    "Converted a neutral mono downmix from 48 kHz to 22.05 kHz and matched peak to a restrained 0.42.",
+    "Applied 2 ms attack and 35 ms tail fades to avoid abrupt boundaries."
+  ],
+  "validation": {
+    "full_ffmpeg_decode": "passed",
+    "format_and_waveform_measurements": "passed",
+    "manual_browser_listening": "not performed"
+  }
+}

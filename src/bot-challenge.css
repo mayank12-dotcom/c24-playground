@@ -1,0 +1,19 @@
+.bot-challenge{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:12;width:390px;max-width:calc(100vw - 560px);padding:19px 21px 17px;border:1.5px solid #34392c;border-radius:15px;background:#fffef9;box-shadow:3px 4px 0 #34392c20,0 10px 30px #2528200a;color:var(--ink,#24251f)}
+.bot-challenge[hidden]{display:none!important}
+.bot-challenge-close{position:absolute;top:10px;right:10px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;font-size:22px;font-weight:400;line-height:1}
+.bot-challenge-close:hover{background:#eeeee5}
+.bot-challenge-eyebrow{display:block;padding-right:24px;color:#777d68;font-size:8px;font-weight:700;letter-spacing:1.5px;line-height:1.5}
+.bot-challenge-heading{margin:7px 18px 5px 0;font-family:var(--display,sans-serif);font-size:19px;font-weight:600;letter-spacing:-.6px;line-height:1.25}
+.bot-challenge-role{margin:0;color:#626958;font-size:11px;font-weight:600;line-height:1.6}
+.bot-challenge-description{margin:9px 0 14px;color:#797e70;font-size:11px;line-height:1.6}
+.bot-challenge-footer{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.bot-challenge-progress{min-width:0;flex:1}
+.bot-challenge-dots{display:flex;align-items:center;gap:6px}
+.bot-challenge-dot{display:block;width:12px;height:12px;border:1px solid #c9cbbc;border-radius:50%;background:#efefe6;transition:background .15s,border-color .15s}
+.bot-challenge-dot.is-complete{border-color:#948126;background:var(--yellow,#f4d85b)}
+.bot-challenge-status{margin:5px 0 0;min-height:15px;color:#626958;font-size:10px;line-height:1.5}
+.bot-challenge-hit{flex-shrink:0;min-height:40px;padding:10px 14px;border:1px solid #24251f;border-radius:9px;background:var(--yellow,#f4d85b);box-shadow:0 2px 0 #252820;font-size:11px;font-weight:650;white-space:nowrap}
+.bot-challenge-hit:hover{background:#f9e386}
+.bot-challenge-hit:disabled{opacity:.6;box-shadow:0 1px 0 #252820}
+.bot-challenge button:focus-visible{outline:3px solid #a88c14;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.bot-challenge-dot{transition:none}}

@@ -1,0 +1,41 @@
+{
+  "source_file_name": "matthewvakaliuk73627-mouse-click-290204.mp3",
+  "source_size_bytes": 11702,
+  "source_sha256": "075e17bdac5c13662a1c9530050e0046f81d4138e00eb3bf30427a7b4404103d",
+  "source_duration_seconds": 0.3657142857142857,
+  "source_sample_rate": 44100,
+  "source_channels": 2,
+  "source_codec": "mp3",
+  "source_bit_rate": 256000,
+  "runtime_file": "public/audio/click.wav",
+  "source_start_seconds": 0.043,
+  "source_end_seconds": 0.123,
+  "duration_seconds": 0.08,
+  "size_bytes": 3572,
+  "sample_rate": 22050,
+  "channels": 1,
+  "codec": "pcm_s16le",
+  "peak": 0.419983,
+  "peak_dbfs": -7.535,
+  "rms": 0.039368,
+  "gain_db": -1.717,
+  "attack_fade_seconds": 0.0004,
+  "tail_fade_seconds": 0.008,
+  "onset_above_0_001_seconds": 0.000272,
+  "onset_above_0_01_seconds": 0.003537,
+  "first_pcm_sample": 0,
+  "last_pcm_sample": 0,
+  "runtime_sha256": "21e392de919446d00ddbf37f0c92e20304c4bf361542350345a2c45fb367cefa",
+  "sampling_decisions": [
+    "Source waveform contains one paired burst near 50/70 ms and a later distinct paired burst near 130/146 ms.",
+    "Selected only the first clean paired burst, preserving its natural down/up click texture and useful decay.",
+    "Trimmed the source to 43\u2013123 ms, before the later separate burst, to avoid playing two clicks for one action.",
+    "Applied a neutral stereo-to-mono downmix, resampled from 44.1 kHz to 22.05 kHz, and matched peak to 0.42.",
+    "Applied a 0.4 ms attack fade and 8 ms tail fade; no pitch change, time stretching, or synthetic click was introduced."
+  ],
+  "validation": {
+    "full_ffmpeg_decode": "passed",
+    "format_and_waveform_measurements": "passed",
+    "manual_browser_listening": "not performed"
+  }
+}
