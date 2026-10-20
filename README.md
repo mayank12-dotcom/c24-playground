@@ -1,9 +1,20 @@
 # Common Ground
 
 Source repository: [mayank12-dotcom/c24-playground](https://github.com/mayank12-dotcom/c24-playground).
-The repository includes the complete version 52 runtime, API, audio, tests,
+The repository includes the complete version 53 runtime, API, audio, tests,
 source scripts, previews and handoff notes. Generated build output, local
 credentials and large reproducible geometry dumps are excluded.
+
+Version 53 fixes a browser startup failure caused by the external Google Fonts
+stylesheet. When that request was blocked, Chromium reproduced a failed Vite CSS
+preload and the world module did not start. DM Sans and Space Grotesk now load
+from four local variable-weight WOFF2 files, with their original OFL licenses.
+The standalone export embeds all four fonts as well as the ten audio assets.
+The original font families and the rest of the interface stylesheet are retained;
+world, character, movement, recruiter combat and API behavior are unchanged.
+See `public/fonts/README.md` for provenance and the version 53 section of
+`design-qa.md` for the actual browser verification scope and result. Version 52's
+previous automated totals below do not establish a successful browser startup.
 
 Version 52 adds a playable encounter with the Product Manager recruiter. Any
 visitor can trigger it with three separate bumps into the recruiter or their
@@ -328,6 +339,15 @@ Conversation clouds remain silent.
 
 ## Verification
 
+`scripts/browser-smoke.mjs` runs the production `dist/` in actual Chromium with
+a same-origin isolated memory API and all external hosts blocked. It checks the
+name/cache flow, local fonts, sampled keyboard movement, original controls and
+the narrow-screen guard. Frame bursts are bounded for the software GPU; this is
+not a frame-rate benchmark or a live Vercel/Redis test. It requires Playwright
+Core and Chromium; use `PLAYWRIGHT_CORE_PATH` and `CHROMIUM_PATH` when they are
+installed outside the project. Evidence is written to the output directory
+passed as its first argument.
+
 `npm test` covers application lifecycle/cancellation, challenge keyboard and button behavior, character articulation and foot plants, bot defeats/departures, turning and camera continuity, deterministic bot routes, anonymous visitor ownership, shared positions, seat exclusivity, expiry, and offline behavior. Garden checks cover connected paths, clear entrances, furniture/chair clearance, access to all nine chairs and bot challenges, journeys between rooms, routes from the lobby, detours through doorways from either side, genuinely unreachable goals, collision-free smoothed routes, resource ownership, and instanced rendering. Push checks include one deliberate action, proximity, duplicate and racing requests, protected real visitors, blocked landings, actual falling-body clearance, cancelled handoffs, and local fallback. Steering checks cover prompt avatar facing, stable held directions, steady views for short taps and blocked movement, bounded automatic camera speed/acceleration, smooth braking, direction reversals, refresh-rate consistency, mouse turns, zoom, and seating resets. A previous live HTTP check against the local server passed two-client movement, concurrent chair claims, and bot seat protection; new challenge behavior is covered through API handler and store tests. `npm run build` passes.
 
 The version 36 baseline smoothed the shoulder/arm joins while retaining continuous walking through direction changes. Its 299 automated checks across 27 files passed, including all 50 original world scenarios checked in four disjoint groups with progress logging. This is a historical full-suite result, not a claim that all checks were rerun for version 42. Room coverage includes rendered wall/collision agreement, floor and hallway alignment, wall-only limb clearance, four-sided held-key contact, open doorway passage, cross-room chair travel, and bot departures. Coverage includes the application flow, physical world, lounge furniture, shared seating, information interactions, and visible push handoff. Collision checks include held keys, diagonal full stops, deliberate sidesteps/backing away, large steps across thin rails, earliest contact, tangent escapes, corner crossings, and solid chairs with usable seating approaches. Coordinator checks verify that proximity and role selection never reveal descriptions before seating, the FAB roster stays intact while passing desks, bot handoffs wait for visible seating, and cancelled/late seat callbacks cannot reopen a popup. Closing and reopening the seated panel retains the same chat and draft; server release waits for the completed exit and precedes another claim. Room checks cover solid side walls, clear doorways, connected corridors, matching rendered and physical wall footprints, planting footprints, and reserved tumble landings. Earlier baseline sweeps completed 396 chair approaches and five minutes of bot activity without collisions or stalls; version 32 additionally samples actual wall contact and cross-room chair transfers.
@@ -421,7 +441,7 @@ is claimed.
 
 Version 42 release verification: **215 focused checks across 17 test files passed**, including 19 selected actual-world checks. All 34 new seats have clear lobby routes, all nine shared sofas pass paired-body checks, and representative entry/exit and occupied-neighbor transfers pass actual skin/sole checks. The final production build, exact-byte HTTP delivery, all ten audio decodes, standalone inline JavaScript/audio validation, and ZIP restore integrity passed. The complete world suite was not rerun; no hands-on browser playtesting or Vercel deployment is claimed.
 
-The current version 52 release targets are `common-ground-v52.html`, `common-ground-v52.zip`, `common-ground-v52-vercel.zip`, and `common-ground-v52-MEMORY.md`. The standalone retains all ten embedded runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
+The current version 53 release targets are `common-ground-v53.html`, `common-ground-v53.zip`, `common-ground-v53-vercel.zip`, and `common-ground-v53-MEMORY.md`. The standalone embeds all four local font files and ten runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
 
 New integration checks execute actual world ticks, scene geometry, and character rigs with the GPU and DOM boundaries replaced. They cover body contacts, separate visitor spawn positions, a timed rise with grounded feet, paused or side departures around people, cancelled navigation, world teardown, and blocked seating arrivals. New checks measure pelvis, ankle, and wrist continuity through walking and lowering; remote entries retain their progress across heartbeats and pause when someone crosses their path. Information checks require proximity and preserve existing chats. A 600-tick scene keeps all 19 bots and the local visitor visible and separated through three bot departures. Independent randomized collision checks covered 17,665 sweeps and over 1.78 million sampled positions without penetration. These are automated simulations, not hands-on browser verification.
 

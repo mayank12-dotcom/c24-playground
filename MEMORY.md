@@ -1,6 +1,36 @@
-# Common Ground — version 52 handoff
+# Common Ground — version 53 handoff
 
-Latest runtime update, 20 October 2026 (UTC): version 52 adds a deliberate
+Latest startup fix, 20 October 2026 (Asia/Kolkata): version 53 removes the external Google
+Fonts CSS dependency. A real Chromium run reproduced the user's blank/non-running
+page when the Google Fonts @import failed: Vite's CSS preload aborted before the
+main world module started. Previous successful source tests, production builds
+and Vercel deployment statuses did not prove browser boot.
+
+The original DM Sans and Space Grotesk families now use four self-hosted normal,
+variable-weight WOFF2 subsets (Latin and Latin Extended), copied unchanged from
+Fontsource Variable 5.3.0 packages with verified registry integrity. Files, hashes,
+provenance and both OFL licenses are in `public/fonts/`. The source stylesheet's
+remaining rules are byte-identical to version 52. The persistent standalone
+exporter embeds the four font files as data URLs alongside all ten audio assets;
+it does not strip font imports with a regex or depend on Google Fonts at runtime.
+The version 52 encounter, scene, character mesh/motion, original UI rules, audio,
+seat coordinates and API source are unchanged by this fix.
+
+The standalone checks pass 7/7 for this font/export change. Current bounded
+actual-Chromium verification uses the production `dist/` and a local memory API,
+with external requests blocked. Five checks pass: name/cache and actual world
+startup, local font delivery, W-key movement through the real API, original
+help/sidebar/sound controls and the 1279px no-canvas notice. The real scene was
+captured and visually inspected at `artifacts/startup-v53-browser.png`. See the
+version 53 section of `design-qa.md` for exact source and scope. Do not replace that result with the older Node scene checks.
+A bounded startup test does not prove a complete gameplay session, audio
+listening, production Redis or two physical computers. The font fix is published as commit
+`b1bb3c137f13a5008136e66c500ed4b0dd38b75d`; Vercel reports its deployment
+completed successfully. This deployment status is separate from browser and
+production Redis verification. A later documentation/test-only commit may
+follow without changing the production runtime.
+
+Previous runtime update, 20 October 2026 (UTC): version 52 adds a deliberate
 three-bump encounter with the recruiter behind the Product Manager desk. Any
 real visitor can be the challenger. Distinct contacts with the recruiter/chair
 count, with the last contact required to hit the chair. Holding into the chair
@@ -45,12 +75,18 @@ checks execute the actual production Lua on an isolated local Redis server;
 this proves the script, not a connection to the production database. No hands-on
 browser gameplay or two-computer test has been performed in this workspace.
 
-The GitHub main branch is connected to Vercel. The exact version 51 baseline
-commit `6597c4a350d6d948b844f2a9e658bc2e35a122f5` received a successful Vercel
-GitHub deployment status on 20 October 2026 at 14:06:18 UTC. The repository's
-homepage is https://c24-playground.vercel.app/. Check the new commit's Vercel
-status after pushing version 52. Direct Vercel tools remain disabled; use the
-existing GitHub deployment integration rather than old chat credentials.
+The GitHub main branch is connected to Vercel. Before this startup fix, version
+52 commit `9eda261f223a4c983325fd34d56f03efaa415303` received a successful Vercel
+GitHub deployment status. That publication did not establish browser startup:
+the user subsequently reported it was not running. The repository's homepage is
+https://c24-playground.vercel.app/. Version 53 font-fix commit
+`b1bb3c137f13a5008136e66c500ed4b0dd38b75d` has a successful Vercel deployment
+status. Five bounded Chromium checks pass against the identical local production
+runtime, as described above. A documentation/test-only follow-up may be deployed
+without changing that runtime.
+Direct Vercel tools remain disabled; use the existing GitHub deployment
+integration rather than old chat credentials. Version 51's confirmed baseline
+commit is `6597c4a350d6d948b844f2a9e658bc2e35a122f5`.
 
 Previous character update (version 51), 20 October 2026 (UTC): the user supplied a dimensional
 3D mannequin reference and requested its form while retaining the white body
@@ -102,7 +138,7 @@ Snapshot date: 20 October 2026 (UTC). This file records project context for cont
 
 ## What to resume
 
-The current prototype is **version 52**. Its recruiter encounter is described above; version 51 remains the character baseline.
+The current prototype is **version 53**. Its browser startup/font fix is described above; version 52 supplies the recruiter encounter and version 51 remains the character baseline.
 The latest multiplayer configuration state remains the version 50 state below. The user clarified that real candidates
 on separate computers must see one another. The existing visitor API, Redis
 store and remote-character renderer already implement that shared presence.
@@ -186,25 +222,25 @@ The current project homepage is https://c24-playground.vercel.app/. Historical U
 
 ## Files in the portable ZIP
 
-The version 52 release targets are `/workspace/common-ground-v52.html`,
-`/workspace/common-ground-v52.zip`, `/workspace/common-ground-v52-MEMORY.md`, and
-the lean `/workspace/common-ground-v52-vercel.zip`. The full portable ZIP extracts
-to `common-ground-v52/`; the Vercel ZIP contains the project files at its root.
+The version 53 release targets are `/workspace/common-ground-v53.html`,
+`/workspace/common-ground-v53.zip`, `/workspace/common-ground-v53-MEMORY.md`, and
+the lean `/workspace/common-ground-v53-vercel.zip`. The full portable ZIP extracts
+to `common-ground-v53/`; the Vercel ZIP contains the project files at its root.
 Current export integrity is checked against the included SHA256 manifest.
 The full portable project root contains:
 
 - `MEMORY.md`: these continuation notes; read this before the historical notes.
-- `prototype.html`: standalone runnable solo prototype, with ten runtime audio assets embedded: background music, four footfalls, dismissal whoosh, button click, and three punch samples.
+- `prototype.html`: standalone runnable solo prototype, with all four local font files and ten runtime audio assets embedded: background music, four footfalls, dismissal whoosh, button click, and three punch samples.
 - `src/`, `api/`, `public/`, `tests/`, `scripts/`: editable application source, shared-world API, viewport guard, checks, and optional offline render helpers.
 - `package.json`, `package-lock.json`, `index.html`, `server.mjs`, `vite.config.js`, `vercel.json`, `.env.example`: install, run, build, and deployment configuration.
 - Build output and dependencies are omitted; run `npm ci` and `npm run build` after extraction. A static `dist/` alone does not execute `api/world.js`.
 - `README.md`: detailed current functionality and source map.
 - `DEPLOYMENT.md`: Vercel and Redis setup; its environment-specific access notes describe the original workspace, not necessarily the next device.
-- `design-qa.md`: chronological evidence and previous iterations. The version 52 recruiter section and this file describe the latest change; the version 51 character section, the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
+- `design-qa.md`: chronological evidence and previous iterations. The version 53 startup section and this file describe the latest change; the version 52 recruiter section remains the encounter baseline; the version 51 character section, the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
 - `artifacts/office-v48-preview.png`: an offline still study exported from the actual world, including all nine real desk/recruiter scenes. It verifies geometry and material colors with an inspection renderer; it is not a browser screenshot or a runtime lighting match. Regenerate with `node scripts/preview-office.mjs` and the existing Blender render helper. Its 114 MB intermediate JSON is intentionally omitted.
 - `artifacts/furniture-seating-v42-preview.png` and its report: eight offline actual-mesh furniture/occupant views. Regenerate them with `scripts/preview-furniture-seats.mjs` and `scripts/render-characters.py`; the large raw export and render caches are omitted.
 - `artifacts/`: the current character reference render/report, historical shoulder comparison and character baseline, relevant room/color renders, and `footstep-sampling-report.json`, `dismiss-sampling-report.json`, `click-sampling-report.json`, and `fight-sampling-report.json`. Historical generated previews and render caches are omitted from this portable ZIP.
-- `verification/version-51/`: current focused character/motion/furniture/coordinator/export results and source fingerprints. Earlier reports remain historical; do not treat previous totals as a current full-suite rerun.
+- `verification/`: current version 53 startup/font/export evidence and source fingerprints when packaged, with earlier recruiter/character reports kept as historical evidence. Do not treat previous totals as a current full-suite rerun.
 - `PACKAGE-CONTENTS.md` and `SHA256SUMS`: export scope and integrity information.
 
 Dependencies, credentials, browser state, and machine-specific tool state are excluded. Original reference images were supplied in the chat; the user's `/Users/mynk/...` paths are not files on a new device. Runtime characters and scenery are procedural and do not require those images to run.
@@ -226,7 +262,7 @@ npm run build
 
 This regenerates `dist/`. `npm run preview` and `npm run dev:static` serve static/frontend-only modes, without the shared presence API. The standalone HTML also runs in solo mode.
 
-No install is needed to inspect the standalone HTML in a desktop browser with WebGL support. The original Google Fonts load when network access is available, with system font fallbacks offline. Scripts, CSS rules, world geometry and all ten audio assets are embedded. Regenerate an export with `npm run export:standalone -- /absolute/output.html`; the exporter validates the actual bundled stylesheet and audio. Source development still requires the Node dependencies. Offline Blender previews are developer aids, not runtime dependencies.
+No install is needed to inspect the standalone HTML in a desktop browser with WebGL support. The original DM Sans and Space Grotesk families are embedded as four WOFF2 data URLs, so there is no Google Fonts request. Scripts, CSS rules, world geometry and all ten audio assets are embedded. Regenerate an export with `npm run export:standalone -- /absolute/output.html`; the exporter validates the actual bundled stylesheet and audio. Source development still requires the Node dependencies. Offline Blender previews are developer aids, not runtime dependencies.
 
 ## Product concept and current layout
 

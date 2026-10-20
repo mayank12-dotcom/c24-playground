@@ -1,0 +1,55 @@
+{
+  "checks": [
+    "first-visit name entry, cached name and real WebGL world startup",
+    "original fonts load locally with all external requests blocked",
+    "keyboard walking updates actual shared visitor coordinates",
+    "help, opportunities, close buttons and sound toggle respond",
+    "1279-pixel notice appears without creating the game"
+  ],
+  "errors": [],
+  "blockedExternal": [],
+  "fontResponses": [
+    {
+      "path": "/fonts/space-grotesk-latin-wght-normal.woff2",
+      "status": 200
+    },
+    {
+      "path": "/fonts/dm-sans-latin-wght-normal.woff2",
+      "status": 200
+    }
+  ],
+  "fontState": {
+    "body": true,
+    "display": true,
+    "faces": [
+      {
+        "family": "DM Sans",
+        "status": "unloaded"
+      },
+      {
+        "family": "DM Sans",
+        "status": "loaded"
+      },
+      {
+        "family": "Space Grotesk",
+        "status": "unloaded"
+      },
+      {
+        "family": "Space Grotesk",
+        "status": "loaded"
+      }
+    ]
+  },
+  "movement": {
+    "from": {
+      "x": 0,
+      "z": 4.8
+    },
+    "to": {
+      "x": 1.7221595613009655e-17,
+      "z": 4.659375
+    },
+    "distance": 0.140625
+  },
+  "scope": "Actual production dist, Chromium/WebGL in bounded frame bursts for the software GPU, real local API with isolated memory store; not the live Vercel host or production Redis."
+}

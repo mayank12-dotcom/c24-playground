@@ -1,10 +1,10 @@
 # Prototype verification
 
-Current release: version 52, the playable Product Manager recruiter encounter. Version 51 remains the character reference baseline. The newest section records current checks. Earlier sections are historical evidence and can describe superseded proportions, bot counts, controls and layouts.
+Current release: version 53, the browser startup/font dependency fix. Version 52 supplies the playable Product Manager recruiter encounter and version 51 remains the character reference baseline. The newest section records current checks. Earlier sections are historical evidence and can describe superseded proportions, bot counts, controls and layouts.
 
-Interactive browser review remains unavailable. This file does not claim a new Vercel deployment.
+Actual Chromium exercised the production bundle locally: five bounded startup/input/UI checks pass, with a captured and inspected scene. The font-fix commit has a successful Vercel deployment status. Older no-browser notes remain historical; a public-site browser session and production Redis remain unverified.
 
-## Evidence and scope
+## Historical initial evidence and scope
 
 Source visual truth: Don’t Look Up screenshots supplied by the user in this chat, used as a character and visual-style reference. The user subsequently requested a third-person camera that always follows behind the avatar; the overhead reference camera is therefore intentionally superseded.
 
@@ -13,9 +13,9 @@ https://www.gather.town/virtual-office. The user requested its kind of layout wh
 retaining the existing design language and functionality. Its public page and
 descriptions were retrieved; a live browser capture of Gather was unavailable.
 
-Implementation: `/workspace/hiring-world/`. No browser-rendered implementation screenshot is available. Actual viewport, screenshot density, same-state comparison, and focused-region visual evidence remain unverified.
+Implementation: `/workspace/hiring-world/`. The initial reviews had no browser-rendered implementation screenshot; viewport, screenshot density, same-state comparison and focused-region visual evidence were unverified then. The version 53 section records the later actual-Chromium startup work separately.
 
-## Completed checks
+## Historical initial checks
 
 - Vite production compilation and JavaScript imports/syntax pass.
 - Application tests cover questions, completion, local persistence, async seat claims, occupied seats, and cancelling a pending application without a stale callback reopening it.
@@ -1520,3 +1520,65 @@ This is automated scene and local Redis verification. No hands-on browser
 playtest, live-production Redis connection or two-computer test is claimed.
 GitHub main uses the existing Vercel deployment integration; confirm the exact
 new commit's status independently of gameplay verification.
+
+
+## Version 53 — remove the external font startup dependency
+
+The user reported that the deployed prototype was not running. A real Chromium
+run reproduced a failed external Google Fonts CSS @import that caused Vite's CSS
+preload to abort before the main world module started. Earlier production builds,
+Node scene tests and successful Vercel deployment statuses did not exercise this
+browser failure. The version 52 automated counts above remain historical and
+must not be presented as a successful startup check for this fix.
+
+The original DM Sans and Space Grotesk families are now served as four local
+normal, variable-weight WOFF2 files: Latin and Latin Extended subsets for each
+family. Files are copied unchanged from the Fontsource Variable 5.3.0 npm
+packages, whose archives were checked against registry SHA-512 integrity values.
+`public/fonts/README.md` records provenance and font hashes; both original SIL
+Open Font License 1.1 texts are included. There is no external Google Fonts CSS
+request in the current runtime. The stylesheet's remaining rules are
+byte-identical to version 52. The world, characters, movement, recruiter
+encounter, original navigation rules, sound and shared API source are unchanged.
+
+The persistent standalone exporter now embeds all four WOFF2 files as data URLs,
+as well as the existing ten audio files. Seven focused standalone checks pass,
+covering the local source font faces, embedded font bytes, original UI/CSS,
+audio and JavaScript validation. This is a targeted font/export verification,
+not a rerun of the full historical gameplay suite.
+
+### Current browser evidence
+
+Five bounded actual-Chromium checks passed against the final production build:
+
+- First-visit name entry closes correctly, stores the name and starts the real
+  WebGL world with the loading overlay removed.
+- The original DM Sans and Space Grotesk faces load locally with HTTP 200. All
+  external requests are blocked, and startup makes zero external requests.
+- A real W-key gesture changes the visitor's position from z=4.8 to z=4.659375
+  through the actual same-origin visitor API, rather than a mocked world.
+- Original help/close, opportunity sidebar/close and sound toggle controls respond.
+- At 1279 CSS pixels the desktop notice appears and no game canvas is created.
+
+The browser run recorded zero page/startup errors. Its actual rendered scene
+was captured and inspected at `artifacts/startup-v53-browser.png`; the companion
+JSON records the font responses, checks, positions and scope. The reproducible
+`scripts/browser-smoke.mjs` uses actual production dist, Chromium/WebGL and the
+real API handler with an isolated memory store. It bounds animation-frame bursts
+because the workspace uses a slow software GPU; it is not a frame-rate benchmark
+or a complete gameplay/interview/fight session. Software-GPU warmup can exceed
+normal heartbeat timeouts; the smoke check permits the normal client retry before
+reading its updated coordinate. This does not establish live Vercel gameplay,
+audible output, production Redis connectivity or two physical computers.
+
+The production build and standalone export pass; the existing nonfatal bundle
+size notice remains. Runtime source hashes and logs accompany the portable
+verification folder. All four font files are embedded byte for byte alongside
+the ten audio recordings. Version 52 controller/scene/API tests were not rerun
+for this CSS/assets/export-only startup repair.
+
+Version 53 font-fix commit `b1bb3c137f13a5008136e66c500ed4b0dd38b75d` has a
+successful Vercel GitHub deployment status. This is separate from the browser
+boot result and does not prove a live Redis connection. Release paths are
+`common-ground-v53.html`, `common-ground-v53.zip`,
+`common-ground-v53-vercel.zip` and `common-ground-v53-MEMORY.md`.

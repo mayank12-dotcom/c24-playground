@@ -66,14 +66,24 @@ Vercel API functions.
 
 The public GitHub repository is
 https://github.com/mayank12-dotcom/c24-playground, branch `main`, connected to
-Vercel at https://c24-playground.vercel.app/. The exact version 51 baseline
-commit `6597c4a350d6d948b844f2a9e658bc2e35a122f5` received a successful Vercel
-GitHub status ("Deployment has completed") on 20 October 2026 at 14:06:18 UTC.
-The version 52 source adds the Product Manager recruiter encounter with the same
-build/API configuration and existing Redis namespace. Pushing it to main uses
-this existing Vercel integration. Check the resulting commit's GitHub status to
-confirm publication; this is separate from a browser playtest or API reachability.
-The prepared `common-ground-v52-vercel.zip` contains the deployable source too.
+Vercel at https://c24-playground.vercel.app/. Before the current fix, version 52
+commit `9eda261f223a4c983325fd34d56f03efaa415303` received a successful Vercel
+GitHub deployment status. The user subsequently reported that the site was not
+running. Real Chromium reproduced an external Google Fonts CSS @import failure
+that aborted Vite's CSS preload before the main world module started; a green
+deployment status alone did not catch this browser startup failure.
+
+Version 53 serves the original DM Sans and Space Grotesk families from four
+local WOFF2 assets under `public/fonts/`, with their licenses. Its standalone
+HTML embeds those font bytes along with all ten sounds. The remaining UI rules,
+gameplay and shared API are unchanged. The release target is
+`common-ground-v53-vercel.zip`, containing complete deployable source and fonts.
+The font fix commit `b1bb3c137f13a5008136e66c500ed4b0dd38b75d` has a
+successful Vercel GitHub status: "Deployment has completed." Dashboard:
+https://vercel.com/mayank12-4351/c24-playground/9Lez4YJZteYmppQbwCskGnCd7Tv8.
+The version 53 browser results in `design-qa.md` describe a separate local
+production-build test. A local boot check does not establish public API
+reachability or production Redis.
 
 A production Redis connection has not been independently verified. Local tests
 execute the actual production Lua script on an isolated Redis instance and
