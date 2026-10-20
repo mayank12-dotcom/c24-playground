@@ -5,6 +5,7 @@ import { createPresence } from './presence.js';
 import { getBotOccupiedJobs } from './crowd.js';
 import { createFloatingPanel } from './panels.js';
 import { createBotChallenge } from './bot-challenge.js';
+import { createRecruiterControls } from './recruiter-controls.js';
 import { renderInfoSidebar } from './info-sidebar.js';
 import { createBackgroundMusic } from './background-music.js';
 import { createFootstepAudio } from './footstep-audio.js';
@@ -46,6 +47,11 @@ const fightAudio = createFightAudio({
   sources: ['/audio/fight-1.wav', '/audio/fight-2.wav', '/audio/fight-3.wav', '/audio/click.wav'],
   volume: 0.45, innerRadius: 3, outerRadius: 10
 });
+const recruiterFightAudio = createFightAudio({
+  document, window, mediaQuery: desktopViewport, button: $('music-toggle'), enabled: false,
+  sources: ['/audio/fight-1.wav', '/audio/fight-2.wav', '/audio/fight-3.wav', '/audio/click.wav'],
+  volume: 0.45, innerRadius: 3, outerRadius: 10
+});
 const dismissedEvents = new WeakSet();
 function playDismiss(event) {
   // One Escape can close more than one window. Keep its feedback to one whoosh.
@@ -64,6 +70,7 @@ createBackgroundMusic({
     dismissAudio.setEnabled(enabled);
     buttonAudio.setEnabled(enabled);
     fightAudio.setEnabled(enabled);
+    recruiterFightAudio.setEnabled(enabled);
     $('music-icon-on').hidden = !enabled;
     $('music-icon-off').hidden = enabled;
     $('music-label').textContent = enabled ? 'Sound on' : 'Sound off';
@@ -76,6 +83,7 @@ $('music-toggle').addEventListener('click', event => {
   dismissAudio.unlock(event);
   buttonAudio.playClick(event);
   fightAudio.unlock(event);
+  recruiterFightAudio.unlock(event);
 });
 let world, presence;
 let worldGeneration = 0;
@@ -83,7 +91,7 @@ let seatedJobId = null, toastTimer;
 let seatOwners = {}, lastSnapshot = null;
 let claimInFlight = null, claimGeneration = 0, releasePending = Promise.resolve();
 let networkReleasePending = Promise.resolve(), seatReleaseTask = null, gettingUp = false;
-let botDefeats = {}, challengeBusy = false;
+let botDefeats = {}, challengeBusy = false, recruiterCombatActive = false;
 $('seats-toggle').addEventListener('click', () => setPanelMode('jobs'));
 const opportunityPanel = createFloatingPanel({ panel: $('opportunity-panel'), toggle: $('seats-toggle'), close: $('panel-close'), onChange: syncSeatedNudge, onDismiss: playDismiss });
 
@@ -96,7 +104,7 @@ function setPanelMode(mode) {
 
 function syncSeatedNudge(panelOpen = opportunityPanel.isOpen()) {
   const job = jobs.find(item => item.id === seatedJobId);
-  const show = desktopViewport.matches && !panelOpen && !gettingUp && job && world?.isSeatReady(job.id);
+  const show = desktopViewport.matches && !panelOpen && !gettingUp && !recruiterCombatActive && job && world?.isSeatReady(job.id);
   $('seated-nudge').hidden = !show;
   if (show) $('seated-nudge-label').textContent = `You’re seated at ${job.title}.`;
 }
@@ -107,6 +115,13 @@ const botChallenge = createBotChallenge({
   onStrike() { world?.bumpBot(botChallenge.getJobId()); },
   onDismiss: playDismiss,
   onCancel() { claimGeneration++; world?.cancelBotChallenge(); }
+});
+
+const recruiterControls = createRecruiterControls({
+  container: $('world').parentElement, window, document,
+  onAttack(type) { return world?.attackRecruiter?.(type) ?? false; },
+  onDisengage() { return world?.endRecruiterFight?.() ?? false; },
+  onDismiss: playDismiss,
 });
 
 function notify(message) {
@@ -157,6 +172,7 @@ function refreshOccupancy(snapshot = lastSnapshot) {
   world?.setSeatOccupancy(foreignSeats);
   world?.setVisitors((snapshot?.visitors || []).filter(visitor => visitor.id !== presence?.id));
   if (snapshot?.serverTime) world?.setServerTime?.(snapshot.serverTime);
+  world?.setRecruiterEncounter?.(snapshot?.recruiterEncounter ?? null, presence?.id);
   const challengedJob=botChallenge.getJobId();
   if(challengedJob&&realSeats[challengedJob]&&realSeats[challengedJob]!==presence?.id){
     if(challengeBusy)claimGeneration++;
@@ -273,6 +289,33 @@ function startWorld() {
       },
       onFightFrame(frame) {
         if (isCurrent()) fightAudio.update(frame);
+      },
+      onRecruiterFightFrame(frame) {
+        if (isCurrent()) recruiterFightAudio.update(frame);
+      },
+      async onRecruiterBump({ contactKind } = {}) {
+        if (!isCurrent() || !presence?.bumpRecruiter || !world) return null;
+        const activeWorld = world, activePresence = presence;
+        activePresence.update(activeWorld.getPlayerState());
+        const result = await activePresence.bumpRecruiter(contactKind);
+        if (!isCurrent() || world !== activeWorld || presence !== activePresence) return null;
+        activeWorld.setRecruiterEncounter?.(result?.recruiterEncounter ?? null, activePresence.id);
+        return result;
+      },
+      onRecruiterFightChange(state) {
+        if (!isCurrent()) return;
+        const active = Boolean(state?.localPlayer && ['falling', 'grounded', 'recovering', 'approaching', 'fighting', 'returning'].includes(state.stage));
+        if (active && !recruiterCombatActive) {
+          claimGeneration++;
+          application.cancelPending();
+          botChallenge.close();
+          world?.cancelBotChallenge();
+          opportunityPanel.close();
+          $('near-prompt').hidden = true;
+        }
+        recruiterCombatActive = active;
+        recruiterControls.update(state);
+        syncSeatedNudge();
       },
       onNear() {
         if (!isCurrent()) return;
@@ -392,6 +435,9 @@ startWorld();
 function stopWorld() {
   worldGeneration++;
   fightAudio.reset();
+  recruiterFightAudio.reset();
+  recruiterCombatActive = false;
+  recruiterControls.reset();
   claimGeneration++;
   const previousWorld = world, previousPresence = presence;
   // Detach the old lifecycle before destroying it: its pending requests may
@@ -436,4 +482,4 @@ $('help-toggle').addEventListener('click', event => setHelp($('controls-help').h
 $('help-close').addEventListener('click', event => setHelp(false, { dismissEvent: event }));
 $('shuffle-look').addEventListener('click', () => { world?.randomizeHair(); notify('A fresh look. Make yourself at home.'); });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') setHelp(false, { dismissEvent: event }); });
-window.addEventListener('pagehide', () => { stopWorld(); namePrompt.destroy(); opportunityPanel.destroy(); botChallenge.destroy(); }, { once: true });
+window.addEventListener('pagehide', () => { stopWorld(); namePrompt.destroy(); opportunityPanel.destroy(); botChallenge.destroy(); recruiterControls.dispose(); }, { once: true });

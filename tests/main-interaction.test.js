@@ -19,6 +19,7 @@ const imports = {
   './button-audio.js': 'export const createButtonAudio = options => globalThis.fixture.createButtonAudio(options);',
   './fight-audio.js': 'export const createFightAudio = options => globalThis.fixture.createFightAudio(options);',
   './name-prompt.js': 'export const createNamePrompt = options => globalThis.fixture.createNamePrompt(options);',
+  './recruiter-controls.js': 'export const createRecruiterControls = options => globalThis.fixture.createRecruiterControls(options);',
   lucide: 'export const createIcons = () => {}; export const Armchair = 0, ArrowUpRight = 0, Keyboard = 0, LocateFixed = 0, Minus = 0, Plus = 0, X = 0, Move = 0, ZoomIn = 0, Shuffle = 0;',
 };
 const bundled = await build({
@@ -51,7 +52,7 @@ class EventTarget {
   fire(name, event = {}) { return (this.listeners.get(name) || []).map(listener => listener(event)); }
 }
 
-function setup({ claimSeat = async () => true, deferSeatReady = false, deferStandUp = false, releaseSeat = async () => {}, nearBot = false, canPush = true, soundStorage = new Map(), desktop = true, visitorName = 'Alex' } = {}) {
+function setup({ claimSeat = async () => true, bumpRecruiter = async () => ({ recruiterBump: { hits: 1, required: 3, started: false }, recruiterEncounter: null }), deferSeatReady = false, deferStandUp = false, releaseSeat = async () => {}, nearBot = false, canPush = true, soundStorage = new Map(), desktop = true, visitorName = 'Alex' } = {}) {
   const calls = [];
   const nodes = new Map();
   const document = new EventTarget();
@@ -79,7 +80,19 @@ function setup({ claimSeat = async () => true, deferSeatReady = false, deferStan
   const fixture = {
     jobs: [{ id: 'product-designer', title: 'Product Designer', company: 'Forma' }, { id: 'frontend-engineer', title: 'Frontend Engineer', company: 'Orbit' }],
     loungeSeats: [{ id: 'lounge-beanbag-1', title: 'The reading corner', kind: 'lounge' }],
-    worlds: [], presences: [],
+    worlds: [], presences: [], fightAudios: [],
+    createRecruiterControls(config) {
+      const ownCalls = [];
+      const instance = {
+        config, calls: ownCalls,
+        update(state) { instance.state = state; ownCalls.push(['update', state]); },
+        reset() { instance.state = null; ownCalls.push(['reset']); },
+        dispose() { instance.state = null; ownCalls.push(['dispose']); },
+        isOpen: () => Boolean(instance.state),
+      };
+      fixture.recruiterControls = instance;
+      return instance;
+    },
     createNamePrompt(config) {
       let name = visitorName;
       fixture.namePromptConfig = config;
@@ -106,7 +119,9 @@ function setup({ claimSeat = async () => true, deferSeatReady = false, deferStan
         reset() { ownCalls.push(['reset']); },
         dispose() { ownCalls.push(['dispose']); },
       };
-      fixture.fightAudio = instance;
+      fixture.fightAudios.push(instance);
+      if (!fixture.fightAudio) fixture.fightAudio = instance;
+      else fixture.recruiterFightAudio = instance;
       return instance;
     },
     createButtonAudio(config) {
@@ -234,6 +249,10 @@ function setup({ claimSeat = async () => true, deferSeatReady = false, deferStan
         isNearBotSeat: () => nearBot,
         canPushBot: () => canPush,
         pushBot(id) { record('pushBot', id); return true; },
+        setRecruiterEncounter(encounter, localId) { record('setRecruiterEncounter', encounter, localId); },
+        getRecruiterFightState: () => instance.recruiterState || { stage: 'idle', localPlayer: false },
+        attackRecruiter(type) { record('attackRecruiter', type); return true; },
+        endRecruiterFight() { record('endRecruiterFight'); return true; },
         cancelBotChallenge() {}, bumpBot() {}, setTalking() {}, say() {},
         zoom() {}, recenter() {}, randomizeHair() {},
         destroy() { record('destroyWorld'); exiting?.resolve(false); exiting = null; },
@@ -249,8 +268,9 @@ function setup({ claimSeat = async () => true, deferSeatReady = false, deferStan
         id: `visitor-test-${fixture.presences.length}`, calls: ownCalls, config,
         claimSeat: async id => { ownCalls.push(['claimSeat', id]); return claimSeat(id, instance); },
         challengeBot: async id => { calls.push(['challengeBot', id]); return { jobId: id, hits: 1, required: 1, won: true }; },
+        bumpRecruiter: async contactKind => { ownCalls.push(['bumpRecruiter', contactKind]); return bumpRecruiter(contactKind, instance); },
         releaseSeat: async () => { calls.push(['releaseSeat']); ownCalls.push(['releaseSeat']); await releaseSeat(instance); },
-        update() {}, destroy() { ownCalls.push(['destroyPresence']); },
+        update(state) { ownCalls.push(['update', state]); }, destroy() { ownCalls.push(['destroyPresence']); },
       };
       fixture.presences.push(instance);
       return instance;
@@ -458,6 +478,53 @@ test('only the current world forwards fight frames and teardown clears rather th
   currentWorld.config.onFightFrame(nextFrame);
   assert.equal(sound.calls.filter(([type]) => type === 'update').length, 2, 'page teardown clears without replaying the last frame');
   assert.equal(ui.fixture.fightAudio, sound, 'world restarts reuse one audio controller');
+});
+
+test('the recruiter fight has independent distance and contact audio while sharing mute, unlock and current-world lifecycle', () => {
+  const ui = setup();
+  const ambient = ui.fixture.fightAudio, recruiter = ui.fixture.recruiterFightAudio;
+  assert.ok(recruiter, 'the interactive recruiter scene has its own spatial audio controller');
+  assert.notEqual(recruiter, ambient);
+  assert.deepEqual(Array.from(recruiter.config.sources), Array.from(ambient.config.sources),
+    'the recruiter uses the existing randomized contact pool');
+  assert.equal(recruiter.config.volume, .45);
+  assert.equal(recruiter.enabled, ambient.enabled);
+  const oldWorld = ui.fixture.world;
+  const frame = Object.freeze({ listener: { x: 12, z: -22 }, source: { x: 13, z: -22 }, impacts: [{ id: 'recruiter-punch-1', type: 'punch' }] });
+  oldWorld.config.onRecruiterFightFrame(frame);
+  assert.equal(recruiter.calls.filter(([type]) => type === 'update').length, 1);
+  assert.equal(recruiter.calls.find(([type]) => type === 'update')[1], frame);
+  assert.equal(ambient.calls.some(([type]) => type === 'update'), false,
+    'the remote ambient fight cannot overwrite a nearby recruiter contact gain');
+  oldWorld.config.onFightFrame({ ...frame, source: { x: -5, z: 8 }, impacts: [] });
+  assert.equal(ambient.calls.filter(([type]) => type === 'update').length, 1);
+  assert.equal(recruiter.calls.filter(([type]) => type === 'update').length, 1);
+
+  const mute = { type: 'click', isTrusted: true };
+  ui.node('music-toggle').fire('click', mute);
+  assert.equal(recruiter.enabled, false);
+  assert.equal(ambient.enabled, false);
+  const enable = { type: 'click', isTrusted: true };
+  ui.node('music-toggle').fire('click', enable);
+  assert.equal(recruiter.enabled, true);
+  assert.equal(ambient.enabled, true);
+  assert.ok(recruiter.calls.some(([type, event]) => type === 'unlock' && event === enable),
+    'the original enable gesture reaches the recruiter sound controller');
+
+  ui.viewport.matches = false; ui.viewport.fire('change');
+  assert.equal(recruiter.calls.filter(([type]) => type === 'reset').length, 1);
+  oldWorld.config.onRecruiterFightFrame(frame);
+  assert.equal(recruiter.calls.filter(([type]) => type === 'update').length, 1);
+  ui.viewport.matches = true; ui.viewport.fire('change');
+  const currentWorld = ui.fixture.world;
+  currentWorld.config.onRecruiterFightFrame(frame);
+  assert.equal(recruiter.calls.filter(([type]) => type === 'update').length, 2);
+  assert.equal(ui.fixture.fightAudios.length, 2, 'restarting the world reuses the two existing controllers');
+  ui.window.fire('pagehide');
+  assert.equal(recruiter.calls.filter(([type]) => type === 'reset').length, 2);
+  currentWorld.config.onRecruiterFightFrame(frame);
+  assert.equal(recruiter.calls.filter(([type]) => type === 'update').length, 2,
+    'a hidden or destroyed world cannot revive consumed contact events');
 });
 
 test('the Sound button forwards its original event only after applying the new sound preference', () => {
@@ -1012,4 +1079,137 @@ test('destroying a pending rise allows a fresh world to claim and ignores old co
   assert.equal(ui.fixture.activeJob, ui.jobs[1].id);
   assert.equal(ui.node('opportunity-panel').hidden, false);
   assert.equal(ui.node('seated-nudge').hidden, true);
+});
+
+test('a recruiter-chair bump publishes the current position before requesting and applying shared encounter ownership', async () => {
+  const encounter = { id: 'encounter-1', ownerId: 'visitor-test-0', startedAt: 1800000000000, updatedAt: 1800000000000, combat: null };
+  const response = { recruiterBump: { hits: 3, required: 3, started: true }, recruiterEncounter: encounter };
+  const ui = setup({ bumpRecruiter: async () => response });
+  const presence = ui.fixture.presences[0];
+  ui.fixture.state.x = 12;
+  ui.fixture.state.z = -22;
+  presence.calls.length = 0;
+  ui.world.calls.length = 0;
+
+  const result = await ui.world.config.onRecruiterBump({ contactKind: 'chair' });
+  assert.equal(result, response, 'the world receives its authoritative bump result');
+  assert.deepEqual(presence.calls.map(([type]) => type), ['update', 'bumpRecruiter']);
+  assert.equal(presence.calls[0][1].x, 12);
+  assert.equal(presence.calls[0][1].z, -22);
+  assert.equal(presence.calls[1][1], 'chair', 'the server can distinguish the final chair bump from a body contact');
+  const applied = ui.world.calls.filter(([type]) => type === 'setRecruiterEncounter');
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0][1], encounter);
+  assert.equal(applied[0][2], presence.id, 'the world can separate its owner from observers');
+  assert.equal(ui.calls.some(([type]) => ['sitAt', 'goToJob', 'releaseSeat'].includes(type)), false,
+    'the special recruiter fight does not claim or transfer an application chair');
+});
+
+test('shared recruiter snapshots reach the current world with local visitor identity and clear on release', () => {
+  const ui = setup();
+  const world = ui.fixture.world, presence = ui.fixture.presences[0];
+  const encounter = { id: 'encounter-2', ownerId: 'another-visitor', startedAt: 1800000000000, updatedAt: 1800000000100, combat: { phase: 'fighting', elapsed: 100 } };
+  world.calls.length = 0;
+  presence.config.onVisitors({ visitors: [], seats: {}, recruiterEncounter: encounter });
+  const applied = world.calls.filter(([type]) => type === 'setRecruiterEncounter');
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0][1], encounter);
+  assert.equal(applied[0][2], presence.id);
+  presence.config.onVisitors({ visitors: [], seats: {}, recruiterEncounter: null });
+  assert.equal(world.calls.filter(([type]) => type === 'setRecruiterEncounter').at(-1)[1], null);
+  assert.equal(ui.node('opportunity-panel').hidden, true, 'shared combat never opens an application remotely');
+});
+
+test('combat movement updates preserve encounter and strike fields for shared presence without reviving an obsolete world', () => {
+  const ui = setup();
+  const oldWorld = ui.fixture.world, oldPresence = ui.fixture.presences[0];
+  const combat = { encounterId: 'encounter-3', phase: 'fighting', elapsed: 400, x: 12, z: -22, rotation: 1.2, playerHealth: 90, recruiterHealth: 65 };
+  const action = { type: 'kick', seq: 2, startedAt: 1800000000400 };
+  const movement = Object.freeze({ x: 11, z: -21, rotation: 1.1, seatedJobId: null, recruiterCombat: combat, combatAction: action });
+  oldPresence.calls.length = 0;
+  oldWorld.config.onMove(movement);
+  assert.equal(oldPresence.calls.filter(([type]) => type === 'update').at(-1)[1], movement,
+    'the coordinator forwards the serializable combat record unchanged');
+
+  ui.viewport.matches = false; ui.viewport.fire('change');
+  ui.viewport.matches = true; ui.viewport.fire('change');
+  const currentPresence = ui.fixture.presences[1];
+  currentPresence.calls.length = 0;
+  oldWorld.config.onMove(movement);
+  assert.equal(currentPresence.calls.some(([type]) => type === 'update'), false,
+    'an old controller cannot overwrite the new visitor with stale strikes');
+});
+
+test('a bump response and combat notification from a destroyed world cannot restart the fight after a desktop restart', async () => {
+  let finishBump;
+  const ui = setup({ bumpRecruiter: () => new Promise(resolve => { finishBump = resolve; }) });
+  const oldWorld = ui.fixture.world, oldPresence = ui.fixture.presences[0];
+  const pending = oldWorld.config.onRecruiterBump({ contactKind: 'chair' });
+  await flush();
+  assert.equal(typeof finishBump, 'function');
+  ui.viewport.matches = false; ui.viewport.fire('change');
+  ui.viewport.matches = true; ui.viewport.fire('change');
+  const currentWorld = ui.fixture.world, currentPresence = ui.fixture.presences[1];
+  const controls = ui.fixture.recruiterControls;
+  currentWorld.calls.length = 0;
+  currentPresence.calls.length = 0;
+  controls.calls.length = 0;
+
+  oldWorld.config.onRecruiterFightChange({ stage: 'fighting', localPlayer: true, hits: 3, required: 3 });
+  finishBump({ recruiterBump: { hits: 3, required: 3, started: true }, recruiterEncounter: { id: 'obsolete-encounter', ownerId: oldPresence.id } });
+  await pending;
+  await oldWorld.config.onRecruiterBump({ contactKind: 'recruiter' });
+  assert.equal(currentWorld.calls.some(([type]) => type === 'setRecruiterEncounter'), false,
+    'the resolved old request cannot give the fresh world an obsolete owner');
+  assert.equal(currentPresence.calls.some(([type]) => type === 'bumpRecruiter' || type === 'update'), false);
+  assert.equal(controls.calls.some(([type]) => type === 'update'), false, 'late callbacks cannot reopen the controls');
+  assert.equal(ui.node('opportunity-panel').hidden, true);
+});
+
+test('recruiter control actions target the active world while toast dismissal only dismisses and viewport teardown resets it', () => {
+  const ui = setup();
+  const controls = ui.fixture.recruiterControls, world = ui.fixture.world;
+  ui.challenge.open(ui.jobs[0]);
+  ui.node('seats-toggle').fire('click');
+  const state = { stage: 'falling', localPlayer: true, hits: 3, required: 3, playerHealth: 100, recruiterHealth: 100 };
+  world.config.onRecruiterFightChange(state);
+  assert.equal(controls.state, state);
+  assert.equal(ui.challenge.isOpen(), false, 'a chair challenge cannot compete with the new fight');
+  assert.equal(ui.node('opportunity-panel').hidden, true, 'the fight controls are visible over the world');
+  world.calls.length = 0;
+
+  controls.config.onAttack('punch');
+  controls.config.onAttack('kick');
+  assert.deepEqual(world.calls.filter(([type]) => type === 'attackRecruiter'), [
+    ['attackRecruiter', 'punch'], ['attackRecruiter', 'kick'],
+  ]);
+  const gesture = { type: 'click', isTrusted: true };
+  controls.config.onDismiss(gesture);
+  assert.equal(world.calls.some(([type]) => type === 'endRecruiterFight' || type === 'standUp'), false,
+    'closing the instruction toast is separate from disengaging the recruiter');
+  assert.equal(dismissalPlays(ui).length, 1);
+  controls.config.onDisengage();
+  assert.equal(world.calls.filter(([type]) => type === 'endRecruiterFight').length, 1);
+
+  ui.viewport.matches = false; ui.viewport.fire('change');
+  assert.equal(controls.calls.filter(([type]) => type === 'reset').length, 1);
+  const strikes = world.calls.filter(([type]) => type === 'attackRecruiter').length;
+  controls.config.onAttack('punch');
+  assert.equal(world.calls.filter(([type]) => type === 'attackRecruiter').length, strikes,
+    'teardown detaches controls from the stopped world');
+});
+
+test('early bump progress and another visitor fighting preserve an independently opened opportunities window', () => {
+  const ui = setup();
+  ui.node('seats-toggle').fire('click');
+  assert.equal(ui.node('opportunity-panel').hidden, false);
+  const progress = { stage: 'progress', hits: 1, required: 3, localPlayer: true };
+  ui.world.config.onRecruiterFightChange(progress);
+  assert.equal(ui.fixture.recruiterControls.state, progress);
+  assert.equal(ui.node('opportunity-panel').hidden, false, 'one bump is not the completed trigger');
+  const observer = { stage: 'fighting', hits: 3, required: 3, localPlayer: false };
+  ui.world.config.onRecruiterFightChange(observer);
+  assert.equal(ui.fixture.recruiterControls.state, observer);
+  assert.equal(ui.node('opportunity-panel').hidden, false, 'watching does not replace the current browsing flow');
+  assert.equal(ui.calls.some(([type]) => ['standUp', 'sitAt', 'goToJob', 'releaseSeat'].includes(type)), false);
 });

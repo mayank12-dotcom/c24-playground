@@ -1,0 +1,20 @@
+.recruiter-controls{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:12;width:min(520px,calc(100vw - 800px));padding:17px 20px 14px;border:1.5px solid #34392c;border-radius:15px;background:#fffef9;color:var(--ink,#24251f);box-shadow:3px 4px 0 #34392c20,0 10px 30px #2528200a;pointer-events:auto}
+.recruiter-controls[hidden]{display:none!important}
+.recruiter-controls[data-local="false"]{bottom:106px}
+.recruiter-controls-close{position:absolute;top:9px;right:9px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;color:inherit;font-size:22px;font-weight:400;line-height:1;cursor:pointer}
+.recruiter-controls-close:hover{background:#eeeee5}
+.recruiter-controls-eyebrow{display:block;padding-right:24px;color:#777d68;font-size:8px;font-weight:700;letter-spacing:1.5px;line-height:1.5}
+.recruiter-controls-heading{margin:6px 20px 6px 0;font-family:var(--display,sans-serif);font-size:18px;font-weight:600;letter-spacing:-.6px;line-height:1.25}
+.recruiter-controls-status{margin:0;color:#626958;font-size:11px;line-height:1.5}
+.recruiter-controls-health{margin:9px 0 0;color:#626958;font-size:10px;font-weight:600;letter-spacing:.2px}
+.recruiter-controls-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+.recruiter-controls-actions[hidden],.recruiter-controls-health[hidden],.recruiter-controls-hint[hidden]{display:none!important}
+.recruiter-controls-attack,.recruiter-controls-leave{min-height:37px;padding:8px 13px;border:1px solid #34392c;border-radius:9px;font:600 11px/1.3 var(--body,sans-serif);white-space:nowrap;cursor:pointer}
+.recruiter-controls-attack{background:var(--yellow,#f4d85b);color:#24251f;box-shadow:0 2px 0 #252820}
+.recruiter-controls-attack:hover{background:#f9e386}
+.recruiter-controls-leave{margin-left:auto;background:#f3f0e7;color:#4c5244;box-shadow:0 1px 0 #25282020}
+.recruiter-controls-leave:hover{background:#eae7dd}
+.recruiter-controls-attack:disabled,.recruiter-controls-leave:disabled{opacity:.48;box-shadow:none;cursor:default}
+.recruiter-controls-hint{margin:10px 0 0;color:#7b8072;font-size:10px;line-height:1.45}
+.recruiter-controls button:focus-visible{outline:3px solid #a88c14;outline-offset:3px}
+@media(max-width:1279px){.recruiter-controls{display:none!important}}

@@ -29,7 +29,7 @@ existing shared visitor system:
 
 1. Install https://vercel.com/integrations/upstash in the Vercel account.
 2. Create a Redis database and connect it to the project serving
-   https://common-ground-v48-vercel.vercel.app/ with Production enabled.
+   https://c24-playground.vercel.app/ with Production enabled.
 3. Confirm the project receives one accepted complete environment-variable pair
    above. Use the HTTPS REST endpoint and standard read/write REST token; the
    synchronization script needs both reads and writes. A redis:// URL or
@@ -64,10 +64,24 @@ Vercel API functions.
 
 ## Current deployment status
 
-Version 51's latest character form is in the GitHub source and the prepared
-`common-ground-v51-vercel.zip`. It uses the same build and API configuration.
-Import or redeploy the complete project to publish the update; preparing source
-and archives does not update the public website by itself.
+The public GitHub repository is
+https://github.com/mayank12-dotcom/c24-playground, branch `main`, connected to
+Vercel at https://c24-playground.vercel.app/. The exact version 51 baseline
+commit `6597c4a350d6d948b844f2a9e658bc2e35a122f5` received a successful Vercel
+GitHub status ("Deployment has completed") on 20 October 2026 at 14:06:18 UTC.
+The version 52 source adds the Product Manager recruiter encounter with the same
+build/API configuration and existing Redis namespace. Pushing it to main uses
+this existing Vercel integration. Check the resulting commit's GitHub status to
+confirm publication; this is separate from a browser playtest or API reachability.
+The prepared `common-ground-v52-vercel.zip` contains the deployable source too.
+
+A production Redis connection has not been independently verified. Local tests
+execute the actual production Lua script on an isolated Redis instance and
+verify contention, ownership and combat relay. That does not prove the hosted
+project has received its Redis credentials. Both the frontend and API must be
+deployed for shared encounter poses and named visitors.
+
+The following records describe earlier releases and direct-tool limitations:
 
 The user independently deployed version 48 at
 https://common-ground-v48-vercel.vercel.app/ and reports seeing another visitor
@@ -83,8 +97,8 @@ unavailable” means that the client is in its local fallback and real candidate
 cannot currently see one another through this connection. It retries automatically.
 This status change does not provision or connect a Redis database.
 
-Rechecked on 2026-10-19 for the version 48 office release. No public Vercel
-deployment has been created or updated from this session. Vercel CLI
+Rechecked on 2026-10-19 for the version 48 office release. Direct Vercel
+deployment was unavailable at that check; GitHub deployment status later confirmed the version 51 publication. Vercel CLI
 64.5.0 is installed, but an authenticated deployment session is not available.
 The current plugin discovery reports `DISABLED_BY_ADMIN` and
 `NOT_AVAILABLE` for Vercel. The enforced network allowlist excludes Vercel;

@@ -1,6 +1,6 @@
 # Prototype verification
 
-Current release: version 51, the latest 3D character reference. The newest section records current checks. Earlier sections are historical evidence and can describe superseded proportions, bot counts, controls and layouts.
+Current release: version 52, the playable Product Manager recruiter encounter. Version 51 remains the character reference baseline. The newest section records current checks. Earlier sections are historical evidence and can describe superseded proportions, bot counts, controls and layouts.
 
 Interactive browser review remains unavailable. This file does not claim a new Vercel deployment.
 
@@ -1451,3 +1451,72 @@ exporter, preserving full font imports and the original navigation. Archive
 entry hashes are verified. HTTP serving could not be tested because the sandbox
 denied a loopback socket. No hands-on browser test, live Redis verification or
 new Vercel deployment is claimed. Earlier sections and test totals are historical.
+
+
+## Version 52 — playable Product Manager recruiter
+
+The Product Manager recruiter now responds to three deliberate bumps from any
+standing real visitor. The last contact must hit the recruiter chair. Releasing
+a key while still against the chair does not reset the contact latch; the
+visitor must back away before bumping again. The server independently enforces
+proximity, per-visitor progress, cooldown, expiry and one encounter owner.
+
+The chair slides backward before the recruiter tumbles, recovers and approaches
+the challenger. Static bounds move with the visible chair. Existing skin/solid
+checks pause blocked fall/return motion, and the recruiter returns through a
+supported lowering and chair restoration. The challenger uses J/punch and
+K/kick, with health and a bottom controls toast. Esc disengages; X hides the
+controls without disabling combat. Existing modal Escape handling retains
+priority. Attacks resolve once at their contact window while close and facing
+the opponent. The existing ambient fight and nineteen bots remain separate.
+
+The current owner publishes encounter-tagged snapshots through the existing
+visitor API. Only that visitor can update the recruiter. Departures, expiry,
+seating and completion clear ownership, and observers finish a visible return.
+Attack sequence IDs remain integer; bounded finite fractional epoch timestamps
+from animation substeps are accepted. The current chair offset and lowering
+progress travel with the pose. Spatial impacts use the actual owner/recruiter
+position with a separate audio controller governed by the original sound toggle.
+No character mesh, shared motion, original navbar stylesheet, audio asset or
+public seat coordinate was changed.
+
+Final verification: **158 focused automated checks across nine files passed**,
+with zero failures or skips in the recorded runs:
+
+- Recruiter controller: 26, including held/separate contact, fall pauses, attack
+  timing/range/facing, blocked pursuit/return, observer resume and a 12-unit home
+  leash that returns before the shared API's 20-unit position bound.
+- Bottom controls: 12, including keyboard/buttons, observers, dismiss versus
+  disengage, modal/text-field priority, lifecycle and same-stage message clearing.
+- Main coordinator: 54, including existing application/seat lifecycle and new
+  encounter ownership, stale callbacks and two separate fight-audio controllers.
+- Recruiter presence: 23, including seven executing the actual production Lua
+  through an isolated local Redis Unix socket, without production credentials.
+- Existing visitor/seat/name presence: 34. Standalone export: 7.
+- Actual-world coordinator: 2. The real world, rigs, skin/collision math and ticks
+  run with GPU/DOM boundaries replaced. A four-workstation fixture retains the
+  real Product Manager station index. Cases cover three physical chair bumps,
+  holding contact, occupied chair-slide pause, fall/recovery/pursuit, a kick that
+  reduces health with impact audio, full return/restoration, synchronous local
+  acknowledgement and the next tick, plus remote-owner audio/cleanup. The full
+  historical world suite was not rerun. The heavy world run preceded only a
+  final UI change that emits `message:null` on clearance; its focused regression
+  is included in the 12 controls checks. No physical code changed afterward.
+
+Three independently sampled actual skinned-mesh trajectories are clear for both
+fall directions and the supported seated return/restoration, using the existing
+.004-unit furniture tolerance. The standalone includes all ten audio assets.
+Twenty-eight protected character/motion, original UI, audio, crowd, seat/camera
+and config files match the published v51 baseline byte for byte. New tests and
+source fingerprints are carried in the portable verification folder.
+
+Production compilation and the persistent standalone exporter pass. The build
+retains the existing nonfatal bundle-size notice. Full font URLs, original
+navbar rules, inline JavaScript and embedded audio are validated by export
+checks. Portable and lean Vercel source packages are generated from tracked
+files and verify every ZIP entry against its source hash.
+
+This is automated scene and local Redis verification. No hands-on browser
+playtest, live-production Redis connection or two-computer test is claimed.
+GitHub main uses the existing Vercel deployment integration; confirm the exact
+new commit's status independently of gameplay verification.

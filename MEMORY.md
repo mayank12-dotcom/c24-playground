@@ -1,6 +1,58 @@
-# Common Ground — version 51 handoff
+# Common Ground — version 52 handoff
 
-Latest character update, 20 October 2026 (UTC): the user supplied a dimensional
+Latest runtime update, 20 October 2026 (UTC): version 52 adds a deliberate
+three-bump encounter with the recruiter behind the Product Manager desk. Any
+real visitor can be the challenger. Distinct contacts with the recruiter/chair
+count, with the last contact required to hit the chair. Holding into the chair
+is one bump. The recruiter falls, recovers, approaches and fights the visitor.
+J punches, K kicks, Esc disengages. A bottom toast explains controls and health;
+X hides the toast but leaves keyboard combat enabled. Existing modals get Escape
+first. The fight is cartoon-style and uses existing sampled impact sounds with
+player-distance gain and the shared mute toggle. The original navigation,
+character mesh/motion, all nineteen ambient bots and their fight stay intact.
+
+Files: `src/recruiter-combat.js` is the deterministic duel/bump controller;
+`src/recruiter-controls.js` and its CSS implement the bottom controls;
+`src/world.js` integrates the recruiter/chair, solid movement, poses and audio;
+`src/main.js` coordinates lifecycle, panels and two separate fight-audio sources.
+`api/world.js` and `src/presence.js` synchronize one encounter owner, poses and
+attacks. The last bump slides the chair backward before tumbling; chair geometry
+and collision bounds move together. Blocked movement pauses the pose. Return
+lowers the recruiter onto the moved chair before restoring its slot. Observers
+finish a visible return if the owner disappears. Do not reset the recruiter
+through furniture or make the public applicant seat fight-only.
+
+Shared encounter rules: 600 ms server bump cooldown, 15 s progress expiry,
+1.7-unit standing visitor range, third chair contact, one atomic owner, 60 s
+maximum encounter, 25 s visitor expiry and a short reset cooldown. A 12-unit
+home leash ends pursuit naturally before the API's 20-unit limit. Combat packets
+must match the current owner and encounter ID. Sequence counters are integers;
+attack timestamps accept bounded finite epoch milliseconds, including fractional
+animation-substep values. Optional `chairOffset` is [-.5,0]; nullable
+`sitProgress` is [0,1]. Credentials remain private. Local fallback supports the
+same deliberate contact rule; standalone HTML cannot share real visitors.
+
+Version 52 passes 158 focused checks across nine files: controller 26, controls
+12, main coordinator 54, new presence 23 (including seven real Lua/Redis cases),
+existing presence/seat/name 34, standalone 7 and actual-world 2. Production build
+and persistent standalone export pass. The heavy scene run preceded only a
+one-line UI message:null clearing follow-up covered by controls tests; physical
+source stayed unchanged. Three sampled production skin/chair trajectories are
+clear. Twenty-eight protected runtime/audio/config files match version 51.
+The complete historical world suite was not rerun. Current verification is
+recorded at the end of `design-qa.md`. New presence
+checks execute the actual production Lua on an isolated local Redis server;
+this proves the script, not a connection to the production database. No hands-on
+browser gameplay or two-computer test has been performed in this workspace.
+
+The GitHub main branch is connected to Vercel. The exact version 51 baseline
+commit `6597c4a350d6d948b844f2a9e658bc2e35a122f5` received a successful Vercel
+GitHub deployment status on 20 October 2026 at 14:06:18 UTC. The repository's
+homepage is https://c24-playground.vercel.app/. Check the new commit's Vercel
+status after pushing version 52. Direct Vercel tools remain disabled; use the
+existing GitHub deployment integration rather than old chat credentials.
+
+Previous character update (version 51), 20 October 2026 (UTC): the user supplied a dimensional
 3D mannequin reference and requested its form while retaining the white body
 and black outline. Version 51 uses a larger spherical head, compact tapered
 body, slimmer relaxed arms, rounded mitten ends and more exposed legs. This
@@ -9,7 +61,7 @@ the existing tiny eyes, bald default, optional Fresh Look hair, recruiter ties,
 movement and collision-safe seating. No stock-photo texture or external model
 asset is used. The current actual-geometry preview is
 `artifacts/character-reference-v51.png`; it is an offline render, not browser
-verification. The prototype remains separate from the last user-run Vercel site.
+verification. At preparation time, that prototype was separate from the last user-run Vercel site.
 The production build and persistent standalone exporter pass. Final character,
 fight-motion, footfall-motion and emotion commands all exited zero on identical
 before/after source hashes. Their first child-pipe reporter output was lost, so
@@ -37,7 +89,7 @@ portable ZIP/HTML exports and three regenerable geometry dumps are ignored.
 The configured Git remote is `origin` at that repository. Source publishing does
 not configure the Vercel database or publish a new version of the website.
 
-Deployment access rechecked on 2026-10-19: Vercel plugin discovery still reports
+Historical direct deployment access check, 2026-10-19: Vercel plugin discovery still reports
 `DISABLED_BY_ADMIN` / `NOT_AVAILABLE`, and the enforced network allowlist excludes
 Vercel. Automatic approval review rejected an additional-network API check as an
 allowlist bypass. No Vercel deployment was created or updated. A `.vercelignore`
@@ -50,7 +102,7 @@ Snapshot date: 20 October 2026 (UTC). This file records project context for cont
 
 ## What to resume
 
-The current prototype is **version 51**. Its character update is described above.
+The current prototype is **version 52**. Its recruiter encounter is described above; version 51 remains the character baseline.
 The latest multiplayer configuration state remains the version 50 state below. The user clarified that real candidates
 on separate computers must see one another. The existing visitor API, Redis
 store and remote-character renderer already implement that shared presence.
@@ -130,14 +182,14 @@ Version 42 release verification: **215 focused checks across 17 test files passe
 
 Preserve version 41's four-variation fight-impact pool: three sampled punch WAVs and the existing click WAV. Contacts follow actual visible, collision-paused punches and kicks; volume fades continuously with actual player distance, independent of the camera. Sound on/off also governs background music, footsteps, dismissal whooshes, and button clicks. All ten runtime audio assets remain. Version 51 supersedes version 36's proportions while preserving its smooth white skin and joined shoulder/arm surface, and the character **keeps walking while smoothly changing direction** as requested in version 35. Do not restore version 34's forced stop before turning.
 
-This is a local source snapshot, not a new Vercel deployment. A historical public URL mentioned in the chat is https://flatland-nu.vercel.app/; its current contents and version have not been verified here.
+The current project homepage is https://c24-playground.vercel.app/. Historical URLs such as flatland-nu.vercel.app and common-ground-v48-vercel.vercel.app refer to earlier projects. Verify an exact commit through its GitHub Vercel status; do not infer production Redis connectivity from deployment success.
 
 ## Files in the portable ZIP
 
-The version 51 release targets are `/workspace/common-ground-v51.html`,
-`/workspace/common-ground-v51.zip`, `/workspace/common-ground-v51-MEMORY.md`, and
-the lean `/workspace/common-ground-v51-vercel.zip`. The full portable ZIP extracts
-to `common-ground-v51/`; the Vercel ZIP contains the project files at its root.
+The version 52 release targets are `/workspace/common-ground-v52.html`,
+`/workspace/common-ground-v52.zip`, `/workspace/common-ground-v52-MEMORY.md`, and
+the lean `/workspace/common-ground-v52-vercel.zip`. The full portable ZIP extracts
+to `common-ground-v52/`; the Vercel ZIP contains the project files at its root.
 Current export integrity is checked against the included SHA256 manifest.
 The full portable project root contains:
 
@@ -148,7 +200,7 @@ The full portable project root contains:
 - Build output and dependencies are omitted; run `npm ci` and `npm run build` after extraction. A static `dist/` alone does not execute `api/world.js`.
 - `README.md`: detailed current functionality and source map.
 - `DEPLOYMENT.md`: Vercel and Redis setup; its environment-specific access notes describe the original workspace, not necessarily the next device.
-- `design-qa.md`: chronological evidence and previous iterations. The version 51 character section and this file describe the latest change; the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
+- `design-qa.md`: chronological evidence and previous iterations. The version 52 recruiter section and this file describe the latest change; the version 51 character section, the version 42 all-furniture seating section and the version 41 spatial-fight section and version 36 shoulder section remain relevant audio/character context. Older sections contain superseded requirements.
 - `artifacts/office-v48-preview.png`: an offline still study exported from the actual world, including all nine real desk/recruiter scenes. It verifies geometry and material colors with an inspection renderer; it is not a browser screenshot or a runtime lighting match. Regenerate with `node scripts/preview-office.mjs` and the existing Blender render helper. Its 114 MB intermediate JSON is intentionally omitted.
 - `artifacts/furniture-seating-v42-preview.png` and its report: eight offline actual-mesh furniture/occupant views. Regenerate them with `scripts/preview-furniture-seats.mjs` and `scripts/render-characters.py`; the large raw export and render caches are omitted.
 - `artifacts/`: the current character reference render/report, historical shoulder comparison and character baseline, relevant room/color renders, and `footstep-sampling-report.json`, `dismiss-sampling-report.json`, `click-sampling-report.json`, and `fight-sampling-report.json`. Historical generated previews and render caches are omitted from this portable ZIP.

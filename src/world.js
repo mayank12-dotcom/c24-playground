@@ -26,6 +26,7 @@ import { createCharacterEmotion } from './character-emotion.js';
 import { createFightImpactTracker, getFightSource } from './fight-impacts.js';
 import { createOfficeMaterial } from './render-materials.js';
 import { normalizeVisitorName } from './visitor-profile.js';
+import { PM_RECRUITER_JOB_ID, PM_REQUIRED_BUMPS, PM_FALL_MS, PM_GROUND_MS, PM_RECOVER_MS, PM_ATTACK_MS, createRecruiterBumpGate, createRecruiterDuel } from './recruiter-combat.js';
 
 const DESK_LABEL_DISTANCE = 3;
 // Begin the transfer before a walking hand enters the chair's turning lane.
@@ -39,7 +40,7 @@ export function setVisitorNameLabel(label, name, { local = false } = {}) {
 }
 
 /** Procedural scene geometry; the application owns playback for local footfalls. */
-export function createWorld({ container, jobs = [], playerName, onNear = () => {}, onBotNear = () => {}, onSelect = () => {}, onMove = () => {}, onNavigateIntent = () => {}, onSeatRequest, onSeat = () => {}, onSeatReady = () => {}, onInfoSelect = () => {}, onStandUpStart = () => {}, onStandUp = () => {}, onFootstep = () => {}, onFightFrame = () => {} }) {
+export function createWorld({ container, jobs = [], playerName, onNear = () => {}, onBotNear = () => {}, onSelect = () => {}, onMove = () => {}, onNavigateIntent = () => {}, onSeatRequest, onSeat = () => {}, onSeatReady = () => {}, onInfoSelect = () => {}, onStandUpStart = () => {}, onStandUp = () => {}, onFootstep = () => {}, onFightFrame = () => {}, onRecruiterBump, onRecruiterFightChange = () => {}, onRecruiterFightFrame = () => {} }) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#d6d2ca');
   scene.fog = new THREE.Fog('#d6d2ca', 70, 150);
@@ -183,6 +184,9 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   ];
   // Manual walking and chair routing share clearance, so walking up against a
   // railing cannot leave the visitor inside the route planner's obstacles.
+  const pmStation = stations.find(station => station.job.id === PM_RECRUITER_JOB_ID);
+  const pmChairId = 'product-manager-recruiter-chair';
+  for(const bound of furnitureBounds)if(bound.kind==='recruiter-chair'&&bound.stationIndex===pmStation?.stationIndex)bound.id=pmChairId;
   const routeBounds=inflateObstacles(furnitureBounds);
   const transitionBoundsBySeat=new Map(),walkingBoundsBySeat=new Map();
   function blockedByFurniture(x,z){
@@ -567,8 +571,264 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
     return true;
   }
   function setServerTime(timeMs){if(Number.isFinite(timeMs)){const offset=timeMs-Date.now();if(fightClockMs!==null)fightClockMs+=offset-serverTimeOffset;serverTimeOffset=offset;}}
-  function getPlayerState(){return {x:playerPosition.x,z:playerPosition.z,hair:playerHair,rotation:player.rotation.y,seated:!!seated,seatedJobId:seated};}
+  function getPlayerState(){const state={x:playerPosition.x,z:playerPosition.z,hair:playerHair,rotation:player.rotation.y,seated:!!seated,seatedJobId:seated,recruiterCombat:null,combatAction:null};if(pmEncounter&&pmEncounter.ownerId===pmLocalId&&pmCombat){state.recruiterCombat={...pmCombat,encounterId:pmEncounter.id};state.combatAction=pmCombat.playerAttack??null;}return state;}
   function publishMovement(){onMove(getPlayerState());}
+  // The Product Manager has one shared, playable encounter. Its owner advances
+  // the duel; other visitors display the server's latest combat snapshot.
+  let pmEncounter=null,pmCombat=null,pmDuel=null,pmLocalId='local-player';
+  let pmBumpHits=0,pmBumpBusy=false,pmRequestGeneration=0,pmLastBumpPoint=null;
+  let pmLastPublished=-Infinity,pmLastUi='',pmLastObservedHit=null,pmImpacts=[];
+  let pmRoute=[],pmRouteGoal=null,pmLanding=null,pmPushSide=1,pmAttached=false,pmReturnEntry=null,pmRestoring=false;
+  let pmChairOffset=0,pmRestoreElapsed=0,pmWaitingMessage=null;
+  const pmChair=pmStation?.group.children.find(child=>child.name==='upholstered-job-chair'&&child.position.z<0);
+  const pmChairRaw=furnitureBounds.find(bound=>bound.id===pmChairId),pmChairRoute=routeBounds.find(bound=>bound.id===pmChairId);
+  const pmChairStartZ=pmChairRaw?.z??0;
+  const pmBumpGate=createRecruiterBumpGate();
+  const pmHome=pmStation?{x:pmStation.position.x,z:pmStation.position.z-1.12,rotation:0}:null;
+  let pmOwnedStation=pmStation?{job:{id:'recruiter-product-manager'},seat:new THREE.Vector3(pmHome.x,0,pmHome.z),rotation:0,colliderId:pmChairId,stationIndex:pmStation.stationIndex}:null;
+  const pmGhost=pmStation?person({hair:5,tie:true}):null;
+  const pmEmotion=pmStation?createCharacterEmotion(pmStation.recruiter,{allResources}):null;
+  const pmSpeech=document.createElement('div');pmSpeech.className='fight-speech-cloud';pmSpeech.hidden=true;
+  pmSpeech.style.cssText='position:absolute;transform:translate(-50%,-100%);padding:7px 11px;background:#fffef9;border:1.2px solid #a65951;border-radius:11px;font:600 12px sans-serif;color:#a65951;pointer-events:none';overlay.append(pmSpeech);
+  const pmPoint=new THREE.Vector3(),pmBox=new THREE.Box3(),pmMatrix=new THREE.Matrix4(),pmWorldMatrix=new THREE.Matrix4();
+  let pmSolids=null,pmChairSolids=[];
+  function pmOwnFightActive(){return !seated&&!seatEntry&&!seatExit&&!!pmEncounter&&pmEncounter.ownerId===pmLocalId&&!!pmCombat&&['approaching','fighting'].includes(pmCombat.phase);}
+  function pmOtherBodies(){return [...getCharacterObstacles(`recruiter:${PM_RECRUITER_JOB_ID}`),{...localBody,x:player.position.x,z:player.position.z}];}
+  function pmStaticSolids(){
+    if(pmSolids)return pmSolids;
+    pmSolids=[];if(!pmHome)return pmSolids;
+    scene.updateMatrixWorld(true);
+    scene.traverse(node=>{
+      if(!node.isMesh||!node.geometry?.attributes.position)return;
+      for(let parent=node;parent;parent=parent.parent)if(parent.userData?.rig||!parent.visible)return;
+      const geometry=node.geometry;if(!geometry.boundingBox)geometry.computeBoundingBox();
+      for(let index=0;index<(node.isInstancedMesh?node.count:1);index++){
+        pmWorldMatrix.copy(node.matrixWorld);
+        if(node.isInstancedMesh){node.getMatrixAt(index,pmMatrix);pmWorldMatrix.multiply(pmMatrix);}
+        pmBox.copy(geometry.boundingBox).applyMatrix4(pmWorldMatrix);
+        if(pmBox.max.y<.09||pmBox.min.y>2.5||pmBox.max.x<pmHome.x-5||pmBox.min.x>pmHome.x+5||pmBox.max.z<pmHome.z-5||pmBox.min.z>pmHome.z+5)continue;
+        let ownChair=false;for(let parent=node;parent;parent=parent.parent)if(parent===pmChair)ownChair=true;
+        if(ownChair){const original=pmBox.clone();original.min.z-=pmChairOffset;original.max.z-=pmChairOffset;pmChairSolids.push(original);}else pmSolids.push(pmBox.clone());
+      }
+    });
+    return pmSolids;
+  }
+  const pmEase=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
+  function inversePmEase(value){let low=0,high=1;for(let i=0;i<28;i++){const mid=(low+high)/2;if(pmEase(mid)<value)low=mid;else high=mid;}return (low+high)/2;}
+  function setPmChairOffset(offset){
+    offset=Math.max(-.5,Math.min(0,offset??0));if(offset===0)offset=0;if(Math.abs(offset-pmChairOffset)<1e-8)return;
+    pmChairOffset=offset;if(pmChair)pmChair.position.z=-1.12+offset;
+    if(pmChairRaw)pmChairRaw.z=pmChairStartZ+offset;if(pmChairRoute)pmChairRoute.z=pmChairStartZ+offset;
+    pmOwnedStation={...pmOwnedStation,seat:new THREE.Vector3(pmHome.x,0,pmHome.z+offset)};transitionBoundsBySeat.delete(pmOwnedStation.job.id);walkingBoundsBySeat.delete(pmOwnedStation.job.id);
+  }
+  function pmFallPoint(progress,landing=pmLanding){
+    if(progress<=.25)return {x:pmHome.x,z:pmHome.z-.45*pmEase(progress/.25)};
+    const q=(progress-.25)/.75,t=pmEase(q),front=pmEase(q/.3);
+    return {x:pmHome.x+(landing.x-pmHome.x)*t,z:pmHome.z-.45+.22*t+.29*(front-t)};
+  }
+  function pmVisualRotation(state){return state.rotation;}
+  function pmPoseOptions(state){
+    if(!state)return {seated:true};
+    const falling=state.phase==='falling',grounded=state.phase==='grounded',recovering=state.phase==='recovering';
+    const progress=falling?Math.min(1,state.elapsed/PM_FALL_MS):1;
+    if(falling&&progress<=.25)return {seated:true};
+    if(falling||grounded||recovering)return {fallProgress:falling?(progress-.25)/.75:1,recoveryProgress:recovering?Math.min(1,state.elapsed/PM_RECOVER_MS):0,pushSide:Math.sign(pmHome.x-state.x)||pmPushSide};
+    const lower=state.sitProgress;
+    return {seated:state.phase==='seated'||lower===1,sitProgress:Number.isFinite(lower)?lower:null,seatSlide:Number.isFinite(lower)?SEATED_FOOT_REACH*(1-lower):null,fight:['approaching','fighting'].includes(state.phase)?recruiterFightPose(state,Date.now()+serverTimeOffset):null};
+  }
+  function pmChairCanMove(offset){
+    const steps=Math.max(1,Math.ceil(Math.abs(offset-pmChairOffset)/.025));
+    for(let index=1;index<=steps;index++){
+      const z=pmChairStartZ+pmChairOffset+(offset-pmChairOffset)*index/steps;
+      for(const body of pmOtherBodies())if(Math.abs(body.x-pmHome.x)<.41+(body.radius??CHARACTER_RADIUS)&&Math.abs(body.z-z)<.38+(body.radius??CHARACTER_RADIUS))return false;
+      for(const bound of furnitureBounds)if(bound!==pmChairRaw&&Math.abs(bound.x-pmHome.x)<.41+bound.halfX&&Math.abs(bound.z-z)<.38+bound.halfZ)return false;
+    }
+    return true;
+  }
+  function pmSkinClear(state,{people=true}={}){
+    if(!pmGhost||!state)return false;
+    pmGhost.position.set(state.x,0,state.z);pmGhost.rotation.y=pmVisualRotation(state);
+    animateCharacter(pmGhost,{dt:0,time:(Date.now()+serverTimeOffset)/1000,...pmPoseOptions(state)});pmGhost.updateMatrixWorld(true);
+    pmStaticSolids();const offset=state.chairOffset??pmChairOffset;const solids=[...pmSolids,...pmChairSolids.map(box=>{const shifted=box.clone();shifted.min.z+=offset;shifted.max.z+=offset;return shifted;})];
+    const mesh=pmGhost.userData.mesh,bodies=people?pmOtherBodies():[];
+    for(let index=0;index<mesh.geometry.attributes.position.count;index++){
+      mesh.getVertexPosition(index,pmPoint);mesh.localToWorld(pmPoint);
+      for(const box of solids)if(pmPoint.x>box.min.x+.004&&pmPoint.x<box.max.x-.004&&pmPoint.y>box.min.y+.004&&pmPoint.y<box.max.y-.004&&pmPoint.z>box.min.z+.004&&pmPoint.z<box.max.z-.004)return false;
+      for(const body of bodies)if(pmPoint.y<2.1&&Math.hypot(pmPoint.x-body.x,pmPoint.z-body.z)<Math.max(.1,(body.radius??CHARACTER_RADIUS)-.035))return false;
+    }
+    return true;
+  }
+  function choosePmLanding(){
+    if(!pmHome)return null;
+    for(const side of [-1,1])for(const reach of [1.2,1.6]){
+      const landing={x:pmHome.x+side*reach,z:pmHome.z-.45+.22,side:-side};pmPushSide=landing.side;
+      let clear=true;
+      for(let index=0;index<=20;index++){
+        const progress=index/20,offset=-.45*pmEase(Math.min(1,progress/.25));
+        if(!pmSkinClear({phase:'falling',elapsed:progress*PM_FALL_MS,...pmFallPoint(progress,landing),rotation:0,chairOffset:offset},{people:false})){clear=false;break;}
+      }
+      if(clear)return landing;
+    }
+    return null;
+  }
+  function getRecruiterFightState(){
+    return {encounterId:pmEncounter?.id??null,stage:pmCombat?.phase??(pmBumpHits?'progress':'idle'),hits:pmBumpHits,required:PM_REQUIRED_BUMPS,localPlayer:!pmEncounter||pmEncounter.ownerId===pmLocalId,playerHealth:pmCombat?.playerHealth??100,recruiterHealth:pmCombat?.recruiterHealth??100};
+  }
+  function emitPmUi(message){const state={...getRecruiterFightState(),message:message??null};const key=JSON.stringify(state);if(key!==pmLastUi){pmLastUi=key;onRecruiterFightChange(state);}}
+  function attachPmRecruiter(){if(pmStation&&!pmAttached){scene.attach(pmStation.recruiter);pmAttached=true;}}
+  function resetPmRecruiter(){
+    if(!pmStation)return;
+    if(pmAttached){pmStation.group.attach(pmStation.recruiter);pmAttached=false;}
+    pmStation.recruiter.position.set(0,0,-1.12);pmStation.recruiter.rotation.y=0;
+    const body=recruiterBodies.find(record=>record.id===`recruiter:${PM_RECRUITER_JOB_ID}`);if(body){body.x=pmHome.x;body.z=pmHome.z;body.radius=CHARACTER_RADIUS;}
+    pmEmotion?.update(0);pmSpeech.hidden=true;
+  }
+  function setRecruiterEncounter(next,localVisitorId){
+    if(!running)return;if(typeof localVisitorId==='string'&&localVisitorId)pmLocalId=localVisitorId;
+    if(!next?.id||!next.ownerId){
+      if(pmEncounter&&pmCombat&&pmCombat.phase!=='seated'){
+        // Losing the lease cannot leave an autonomous invisible opponent.
+        // Continue a visible, collision-safe return, without publishing ownership.
+        if(!pmDuel){
+          if(!pmLanding&&pmCombat.phase==='falling'){const progress=pmCombat.elapsed/PM_FALL_MS,q=(progress-.25)/.75,t=pmEase(q);pmLanding=t>.00001?{x:pmHome.x+(pmCombat.x-pmHome.x)/t,z:pmHome.z-.23,side:Math.sign(pmHome.x-pmCombat.x)||1}:choosePmLanding();}
+          pmLanding=pmLanding||{x:pmCombat.x,z:pmCombat.z,side:Math.sign(pmHome.x-pmCombat.x)||1};pmDuel=createRecruiterDuel({home:pmHome,landing:pmLanding,fallPosition:p=>pmFallPoint(p)});pmDuel.resume(pmEncounter,pmCombat,Date.now()+serverTimeOffset);}
+        pmDuel.end();pmEncounter={...pmEncounter,ownerId:'departed-owner'};
+      }else{pmEncounter=null;pmCombat=null;pmDuel=null;pmReturnEntry=null;pmRestoring=false;pmBumpHits=0;pmLanding=null;pmLastBumpPoint=null;pmBumpGate.reset();resetPmRecruiter();}
+      emitPmUi();return;
+    }
+    if(next.id===pmEncounter?.id){
+      pmEncounter={...pmEncounter,...next};
+      if(next.ownerId!==pmLocalId&&next.combat){
+        if(pmLastObservedHit!==null&&next.combat.hitSeq>pmLastObservedHit&&Date.now()+serverTimeOffset-next.updatedAt<1200)pmImpacts.push({id:`${next.id}:observed:${next.combat.hitSeq}`,type:next.combat.playerAttack?.type??next.combat.recruiterAttack?.type??'punch'});
+        pmLastObservedHit=next.combat.hitSeq;pmCombat={...next.combat};
+      }
+      return;
+    }
+    pmEncounter={...next};pmReturnEntry=null;pmRestoring=false;pmBumpHits=PM_REQUIRED_BUMPS;pmRoute=[];pmRouteGoal=null;pmLastPublished=-Infinity;pmLastObservedHit=next.combat?.hitSeq??null;
+    attachPmRecruiter();
+    if(next.ownerId===pmLocalId){
+      pmLanding=pmLanding||choosePmLanding()||{x:pmHome.x-1.2,z:pmHome.z-.23,side:1};pmPushSide=pmLanding.side;
+      pmDuel=createRecruiterDuel({home:pmHome,landing:pmLanding,fallPosition:p=>pmFallPoint(p)});
+      if(next.combat)pmDuel.resume(next,next.combat,Date.now()+serverTimeOffset);else pmDuel.start(next);pmCombat={...pmDuel.getState(),chairOffset:next.combat?.chairOffset??0};
+      keys.clear();stopKeyboardMovement();clearSeatRequest({allowContact:true});waypoints=[];target.copy(playerPosition);destinationRing.visible=false;
+    }else{pmDuel=null;pmCombat=next.combat?{...next.combat}:{phase:'falling',elapsed:0,x:pmHome.x,z:pmHome.z,rotation:0,playerHealth:100,recruiterHealth:100,hitSeq:0};}
+    emitPmUi();
+  }
+  async function requestPmBump(contactKind,now){
+    pmBumpBusy=true;const generation=++pmRequestGeneration;
+    try{
+      let result;
+      if(onRecruiterBump)result=await onRecruiterBump({contactKind});
+      else{
+        pmBumpHits=Math.min(PM_REQUIRED_BUMPS,pmBumpHits+1);
+        if(pmBumpHits===PM_REQUIRED_BUMPS&&contactKind!=='chair')pmBumpHits=PM_REQUIRED_BUMPS-1;
+        result={recruiterBump:{hits:pmBumpHits,required:PM_REQUIRED_BUMPS,started:pmBumpHits===PM_REQUIRED_BUMPS},recruiterEncounter:pmBumpHits===PM_REQUIRED_BUMPS?{id:`local-pm-${now}`,ownerId:pmLocalId,startedAt:now,updatedAt:now,combat:null}:null};
+      }
+      if(!running||generation!==pmRequestGeneration)return;
+      if(result?.recruiterBump){pmBumpHits=result.recruiterBump.hits??pmBumpHits;emitPmUi(result.recruiterBump.reason==='chair-needed'?'One more bump into the recruiter’s chair.':undefined);}
+      if(result?.recruiterEncounter)setRecruiterEncounter(result.recruiterEncounter,pmLocalId);
+    }finally{if(generation===pmRequestGeneration)pmBumpBusy=false;}
+  }
+  function updateRecruiterBump(contact,now,requestedDirection){
+    if(!pmStation||pmEncounter||seated||seatEntry||seatExit)return;
+    let kind=contact?.kind==='recruiter-chair'&&contact.stationIndex===pmStation.stationIndex?'chair':contact?.id===`recruiter:${PM_RECRUITER_JOB_ID}`?'recruiter':null;
+    if(kind==='recruiter'&&requestedDirection){const reach={x:playerPosition.x+requestedDirection.x*.2,z:playerPosition.z+requestedDirection.z*.2};if(moveWithCharacters(playerPosition,reach,[pmChairRoute],[]).blocked)kind='chair';}
+    // Let the body visibly step back before the next impact; key repeat and
+    // releasing/repressing while still touching the chair remain one bump.
+    if(!kind&&pmLastBumpPoint&&Math.hypot(playerPosition.x-pmLastBumpPoint.x,playerPosition.z-pmLastBumpPoint.z)<.14)kind=pmLastBumpPoint.kind;
+    if(!pmBumpGate.update(kind,now)||pmBumpBusy)return;
+    pmLastBumpPoint={x:playerPosition.x,z:playerPosition.z,kind};
+    if(pmBumpHits>=PM_REQUIRED_BUMPS-1){pmLanding=choosePmLanding();if(!pmLanding){emitPmUi('Give the recruiter a little room to fall, then bump the chair again.');return;}}
+    requestPmBump(kind,now).catch(()=>{if(running)emitPmUi('The bump couldn’t connect. Step back and try again.');});
+  }
+  function recruiterFightPose(state,now,playerSide=false){
+    if(!state||!['approaching','fighting'].includes(state.phase))return null;
+    const attack=playerSide?state.playerAttack:state.recruiterAttack;
+    const progress=attack&&Number.isFinite(attack.startedAt)?Math.max(0,Math.min(1,(now-attack.startedAt)/PM_ATTACK_MS[attack.type])):0;
+    return {guard:1,punch:attack?.type==='punch'?progress:0,kick:attack?.type==='kick'?progress:0,punchSide:attack?.seq%2?'right':'left'};
+  }
+  function attackRecruiter(type){
+    if(!running||!pmDuel||pmEncounter?.ownerId!==pmLocalId||seated||seatEntry||seatExit)return false;
+    const accepted=pmDuel.attack(type,Date.now()+serverTimeOffset);if(accepted){pmCombat={...pmDuel.getState(),chairOffset:pmChairOffset};publishMovement();emitPmUi();}return accepted;
+  }
+  function endRecruiterFight(){if(!pmDuel||pmEncounter?.ownerId!==pmLocalId||['returning','seated'].includes(pmCombat?.phase))return false;pmDuel.end();pmCombat={...pmDuel.getState(),chairOffset:pmChairOffset};emitPmUi();return true;}
+  function movePmRecruiter(from,to,rotation){
+    const budget=Math.hypot(to.x-from.x,to.z-from.z);if(!budget)return {...from,blocked:false};
+    const returning=pmDuel?.getState().phase==='returning';
+    const bounds=returning?seatBounds(pmOwnedStation):routeBounds;
+    const goal=returning?pmHome:playerPosition;
+    if(!pmRouteGoal||Math.hypot(goal.x-pmRouteGoal.x,goal.z-pmRouteGoal.z)>.55||!pmRoute.length){
+      pmRouteGoal={x:goal.x,z:goal.z};pmRoute=findSeatWalkRoute(from,goal,bounds)??[];
+    }
+    while(pmRoute.length&&Math.hypot(pmRoute[0].x-from.x,pmRoute[0].z-from.z)<.06)pmRoute.shift();
+    const destination=pmRoute[0]||to,span=Math.hypot(destination.x-from.x,destination.z-from.z);
+    const proposed=span?{x:from.x+(destination.x-from.x)*Math.min(1,budget/span),z:from.z+(destination.z-from.z)*Math.min(1,budget/span)}:to;
+    const movement=moveWithCharacters(from,proposed,bounds,pmOtherBodies(),{ignoreId:`recruiter:${PM_RECRUITER_JOB_ID}`});
+    if(returning&&!movement.blocked){const state={...pmDuel.getState(),...movement,rotation};if(!pmSkinClear(state))return {...from,blocked:true};}
+    return movement;
+  }
+  function updatePmReturn(dt){
+    if(pmRestoring){
+      const elapsed=Math.min(350,pmRestoreElapsed+dt*1000),offset=-.45*(1-pmEase(elapsed/350));
+      if(!pmChairCanMove(offset)||!pmSkinClear({...pmCombat,x:pmHome.x,z:pmHome.z+offset,rotation:0,sitProgress:1,chairOffset:offset})){pmWaitingMessage='Give the recruiter a little room to put the chair back.';return;}
+      pmRestoreElapsed=elapsed;setPmChairOffset(offset);pmCombat={...pmCombat,x:pmHome.x,z:pmHome.z+offset,rotation:0,sitProgress:1,chairOffset:offset,elapsed:elapsed};
+      if(elapsed>=350){pmCombat={...pmCombat,phase:'seated',elapsed:0,chairOffset:0};pmDuel=null;pmReturnEntry=null;pmRestoring=false;}
+      return;
+    }
+    if(!pmReturnEntry){
+      if(pmCombat.sitProgress===1){pmRestoring=true;pmRestoreElapsed=350*inversePmEase(1+pmChairOffset/.45);return;}
+      if(pmCombat.sitProgress>0){const stage={x:pmHome.x,z:pmOwnedStation.seat.z+SEATED_FOOT_REACH};const controller=createSeatEntry({from:stage,to:pmOwnedStation.seat,loweringFrom:stage,fromRotation:0,toRotation:0,alignMs:0});controller.update(650*inversePmEase(pmCombat.sitProgress));pmReturnEntry={bounds:seatBounds(pmOwnedStation),controller};}
+    }
+    if(!pmReturnEntry){
+      const from={x:pmCombat.x,z:pmCombat.z},plan=planSeatEntry(pmOwnedStation,from,pmCombat.rotation,pmOtherBodies());
+      if(!plan){pmWaitingMessage='The recruiter is waiting for a clear way back.';return;}
+      pmReturnEntry={bounds:plan.bounds,controller:createSeatEntry({from,to:pmOwnedStation.seat,via:plan.via,loweringFrom:plan.stage,finalApproachFrom:plan.finalApproachFrom,initialFacingTo:plan.initialFacingTo,fromRotation:pmCombat.rotation,toRotation:0})};
+    }
+    const entry=pmReturnEntry,previous=entry.controller.state,proposal=entry.controller.peek(dt*1000);
+    const movement=moveSeatTransfer(pmCombat,proposal,pmOwnedStation,entry.bounds,pmOtherBodies(),{fromRotation:pmCombat.rotation,toRotation:proposal.rotation,fromSlide:Number.isFinite(previous.sitProgress)&&previous.sitProgress>0?previous.seatSlide:null,toSlide:Number.isFinite(proposal.sitProgress)&&proposal.sitProgress>0?proposal.seatSlide:null});
+    const pose=entry.controller.update(dt*1000,{blocked:movement.blocked});
+    pmCombat={...pmCombat,x:pose.x,z:pose.z,rotation:pose.rotation,sitProgress:pose.sitProgress,chairOffset:pmChairOffset,elapsed:pose.elapsedMs};
+    if(pose.complete){pmRestoring=true;pmRestoreElapsed=0;}
+  }
+  function updateRecruiterDuel(dt,now){
+    if(!pmStation||!pmEncounter||!pmCombat)return;
+    pmWaitingMessage=null;
+    if(pmDuel&&(pmEncounter.ownerId===pmLocalId||pmEncounter.ownerId==='departed-owner')){
+      if(pmCombat.phase==='returning')updatePmReturn(dt);
+      else{
+        const result=pmDuel.update(dt*1000,{now,player:{x:player.position.x,z:player.position.z,rotation:player.rotation.y},move:movePmRecruiter,canAdvanceFall:pose=>{
+          const offset=pose.phase==='falling'?-.45*pmEase(Math.min(1,pose.elapsed/PM_FALL_MS/.25)):-.45;
+          if(!pmChairCanMove(offset)||!pmSkinClear({...pose,chairOffset:offset})){pmWaitingMessage='Give the recruiter a little room to get up.';return false;}
+          setPmChairOffset(offset);return true;
+        },canReturnSeat:()=>false});
+        pmCombat={...result.state,chairOffset:pmChairOffset,sitProgress:null};pmImpacts.push(...result.impacts);
+      }
+      if(pmEncounter.ownerId===pmLocalId&&now-pmLastPublished>=100){pmLastPublished=now;publishMovement();}
+      if(pmCombat?.phase==='seated'){
+        if(pmEncounter?.ownerId===pmLocalId)publishMovement();
+        else{pmEncounter=null;pmCombat=null;pmDuel=null;pmBumpHits=0;pmLanding=null;pmLastBumpPoint=null;pmBumpGate.reset();resetPmRecruiter();}
+      }
+    }
+    if(pmCombat){
+      setPmChairOffset(pmCombat.chairOffset??0);attachPmRecruiter();pmStation.recruiter.position.set(pmCombat.x,0,pmCombat.z);pmStation.recruiter.rotation.y=pmVisualRotation(pmCombat);
+      const body=recruiterBodies.find(record=>record.id===`recruiter:${PM_RECRUITER_JOB_ID}`);if(body){body.x=pmCombat.x;body.z=pmCombat.z;const fall=pmCombat.phase==='falling'?Math.max(0,Math.min(1,(pmCombat.elapsed/PM_FALL_MS-.25)/.75)):['grounded','recovering'].includes(pmCombat.phase)?1:0;const recover=pmCombat.phase==='recovering'?Math.min(1,pmCombat.elapsed/PM_RECOVER_MS):0;body.radius=CHARACTER_RADIUS+fall*(1-recover);}
+      pmEmotion?.update(['approaching','fighting'].includes(pmCombat.phase)?1:.45);pmSpeech.hidden=pmCombat.phase==='seated';pmSpeech.textContent=pmCombat.phase==='fighting'?'#!?':pmCombat.phase==='returning'?'…':'!!';
+    }
+    emitPmUi(pmWaitingMessage);
+  }
+  let pmPreviousPosition=pmHome?{...pmHome}:null;
+  function animatePmRecruiter(dt,now){
+    const state=pmCombat;if(!state)return;
+    animateCharacter(pmStation.recruiter,{dt,time:now/1000,velocityX:dt?(state.x-pmPreviousPosition.x)/dt:0,velocityZ:dt?(state.z-pmPreviousPosition.z)/dt:0,...pmPoseOptions(state)});
+    pmPreviousPosition={x:state.x,z:state.z};
+    projectLabel(pmSpeech,pmStation.recruiter.position,2.45);
+  }
+  function publishRecruiterAudio(now){
+    const owner=pmEncounter?.ownerId===pmLocalId?player:visitors.get(pmEncounter?.ownerId)?.character;
+    const source=pmCombat?(owner?{x:(pmCombat.x+owner.position.x)/2,z:(pmCombat.z+owner.position.z)/2}:{x:pmCombat.x,z:pmCombat.z}):pmHome;
+    const impacts=pmImpacts.splice(0);if(source)onRecruiterFightFrame({clockMs:now,listener:{x:player.position.x,z:player.position.z},source,impacts,paused:!pmCombat||(pmCombat.phase!=='fighting'&&!impacts.length)});
+  }
+
   const ringGeometry=new THREE.RingGeometry(.49,.55,40); allResources.add(ringGeometry);
   const ringMaterial=new THREE.MeshBasicMaterial({color:'#cb7965',side:THREE.DoubleSide});allResources.add(ringMaterial);
   const ring=new THREE.Mesh(ringGeometry,ringMaterial);ring.rotation.x=-Math.PI/2;ring.position.y=.025;scene.add(ring);
@@ -902,6 +1162,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       }
     }else{follow.prepareWalk(null,dt);destinationRing.visible=false;}
     blockingObject=contact;
+    updateRecruiterBump(contact,wallTime+serverTimeOffset,requestedDirection);
     const displacementX=playerPosition.x-previousX,displacementZ=playerPosition.z-previousZ;
     const actuallyMoving=Math.hypot(displacementX,displacementZ)>.00001;
     // The body turns toward each intention while walking continues. Actual
@@ -921,19 +1182,20 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       entryPose={...pose,seatedJobId:pose.complete?seated:null,logicalSeatedJobId:seated};
       if(pose.complete)seatEntry=null;
     }
+    updateRecruiterDuel(dt,wallTime+serverTimeOffset);
     const currentStation=seatById(seated);
     const playerPose=exitPose||entryPose||{x:playerPosition.x,z:playerPosition.z,rotation:currentStation?.rotation??angle,seatedJobId:seated};
-    const view=follow.update({dt,position:playerPose,direction:facingDirection,moving:actuallyMoving,seated:!!seated,yaw:seated?playerPose.rotation:striking?strike.yaw:undefined});
+    const view=follow.update({dt,position:playerPose,direction:facingDirection,moving:actuallyMoving,seated:!!seated,yaw:seated?playerPose.rotation:striking?strike.yaw:pmOwnFightActive()&&pmCombat?.playerAttack&&!actuallyMoving?Math.atan2(pmCombat.x-player.position.x,pmCombat.z-player.position.z):undefined});
     angle=view.yaw;player.rotation.y=entryPose||exitPose?playerPose.rotation:angle;
     if(actuallyMoving || Math.abs(Math.atan2(Math.sin(angle-previousYaw),Math.cos(angle-previousYaw)))>.0001)publishMovement();
     player.position.set(playerPose.x,0,playerPose.z);
     const bumpAge=time-bumpStarted;
     const bumpRecoil=!seated&&bumpAge>=0&&bumpAge<.24?Math.sin(Math.PI*bumpAge/.24)*.65:0;
-    animateCharacter(player, { dt, time, velocityX: dt ? (player.position.x-previousVisualX)/dt : 0, velocityZ: dt ? (player.position.z-previousVisualZ)/dt : 0, seated: !!playerPose.seatedJobId, talking, standProgress:exitPose?.standProgress??null, seatSlide:exitPose?.seatSlide??entryPose?.seatSlide??null, sitProgress:entryPose?.sitProgress??null, walkTarget:playerPose.walkTarget??null, lounging:currentStation?.job.kind==='lounge', strike:striking?strikeProgress:0, pushing:striking&&strike.confirmed, recoil:bumpRecoil, onFootstep });
+    animateCharacter(player, { dt, time, velocityX: dt ? (player.position.x-previousVisualX)/dt : 0, velocityZ: dt ? (player.position.z-previousVisualZ)/dt : 0, seated: !!playerPose.seatedJobId, talking, standProgress:exitPose?.standProgress??null, seatSlide:exitPose?.seatSlide??entryPose?.seatSlide??null, sitProgress:entryPose?.sitProgress??null, walkTarget:playerPose.walkTarget??null, lounging:currentStation?.job.kind==='lounge', strike:striking?strikeProgress:0, pushing:striking&&strike.confirmed, recoil:bumpRecoil, fight:pmOwnFightActive()?recruiterFightPose(pmCombat,wallTime+serverTimeOffset,true):null, onFootstep });
     // A won bot chair is reserved before its stand-and-leave animation ends.
     // Reveal the role only after the visitor's visible pose is actually seated.
     if(playerPose.seatedJobId&&!seatReady)announceSeated(seatById(seated));
-    stations.forEach((station,index)=>animateCharacter(station.recruiter, { dt, time, seated: true, talking: seated===station.job.id&&talking, phaseOffset: index*.7 }));
+    stations.forEach((station,index)=>{if(station===pmStation&&pmCombat&&pmCombat.phase!=='seated')animatePmRecruiter(dt,wallTime+serverTimeOffset);else animateCharacter(station.recruiter, { dt, time, seated: true, talking: seated===station.job.id&&talking, phaseOffset: index*.7 });});
     const renderedFighters = [];
     for(const actor of [...botCharacters.values(),...visitors.values()]){
       const {character,desired}=actor;
@@ -944,7 +1206,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
       const velocityZ=dt ? (character.position.z-actor.animationPrevious.z)/dt : 0;
       const challengeRecoil=striking&&actor.kind==='bot'&&desired.seatedJobId===strike.jobId?Math.sin(Math.PI*strikeProgress):0;
       const visiblySeated=!!(pose.seatedJobId||pose.loungeSeatId)&&Math.hypot(character.position.x-pose.x,character.position.z-pose.z)<.06;
-      animateCharacter(character, { dt, time: desired.fightRole?(fightClockMs??wallTime+serverTimeOffset)/1000:crowdTime, velocityX, velocityZ, seated: visiblySeated, talking: desired.social||desired.watching?!!desired.talking:visiblySeated, lounging:!!desired.loungeSeatId||seatById(poseSeatId(pose))?.job.kind==='lounge', phaseOffset: (Number(String(desired.id).replace(/\D/g,''))||0)*.6, standProgress:pose.standProgress,seatSlide:pose.seatSlide??null,sitProgress:pose.sitProgress??null,walkTarget:pose.walkTarget??null,fallProgress:pose.fallProgress??null,recoveryProgress:pose.recoveryProgress??null,pushSide:pose.pushSide??1, strike:actor.kind==='bot'?(desired.strike||0):0, recoil:Math.max(challengeRecoil,actor.kind==='bot'&&!desired.fightRole?(desired.recoil||0):0), paddleSwing:desired.tableTennis?desired.swing:null, fight:pose.fightPose??null });
+      animateCharacter(character, { dt, time: desired.fightRole?(fightClockMs??wallTime+serverTimeOffset)/1000:crowdTime, velocityX, velocityZ, seated: visiblySeated, talking: desired.social||desired.watching?!!desired.talking:visiblySeated, lounging:!!desired.loungeSeatId||seatById(poseSeatId(pose))?.job.kind==='lounge', phaseOffset: (Number(String(desired.id).replace(/\D/g,''))||0)*.6, standProgress:pose.standProgress,seatSlide:pose.seatSlide??null,sitProgress:pose.sitProgress??null,walkTarget:pose.walkTarget??null,fallProgress:pose.fallProgress??null,recoveryProgress:pose.recoveryProgress??null,pushSide:pose.pushSide??1, strike:actor.kind==='bot'?(desired.strike||0):0, recoil:Math.max(challengeRecoil,actor.kind==='bot'&&!desired.fightRole?(desired.recoil||0):0), paddleSwing:desired.tableTennis?desired.swing:null, fight:pose.fightPose??(pmEncounter?.ownerId===desired.id?recruiterFightPose({...pmCombat,playerAttack:desired.combatAction??pmCombat?.playerAttack},wallTime+serverTimeOffset,true):null) });
       actor.emotion?.update(pose.anger??0);
       actor.animationPrevious.copy(character.position);
       if(actor.kind==='bot'&&FIGHTER_IDS.includes(desired.id)&&desired.fightRole==='fighter'){
@@ -960,6 +1222,7 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
     }
     onFightFrame({dt,listener:{x:player.position.x,z:player.position.z},source:getFightSource(renderedFighters),
       impacts:fightImpacts.update({clockMs:fightClockMs,paused:fightPaused,fighters:renderedFighters}),paused:fightPaused});
+    publishRecruiterAudio(wallTime+serverTimeOffset);
     ring.position.set(playerPosition.x,.025,playerPosition.z);ring.visible=!seated;
     focus.copy(player.position);floor.position.set(focus.x,-.12,focus.z);
     camera.position.set(view.camera.x,view.camera.y,view.camera.z);
@@ -1021,5 +1284,5 @@ export function createWorld({ container, jobs = [], playerName, onNear = () => {
   frame=requestAnimationFrame(tick);
   const visibility=()=>{keys.clear();stopKeyboardMovement();cancelAnimationFrame(frame);if(!document.hidden&&running){lastTime=performance.now();frame=requestAnimationFrame(tick);}};
   document.addEventListener('visibilitychange',visibility);
-  return {say,randomizeHair,goToJob,sitAt,standUp,zoom,recenter,setVisitors,setSeatOccupancy,setServerTime,setBotDefeats,bumpBot,canPushBot,pushBot,cancelBotChallenge,isNearBotSeat,getPlayerState,clearSeatRequest,isSeatReady(id){return !seatExit&&!seatEntry&&seated===id&&seatReady;},isSittingDown(){return !!seatEntry;},goToInfoRoom(){return walkToGround(new THREE.Vector3(0,0,25.5));},isStandingUp(){return !!seatExit;},setTalking(value){talking=!!value;},destroy(){running=false;navigationGeneration++;if(seatExit){seatExit.resolve(false);seatExit=null;}cancelAnimationFrame(frame);clearTimeout(speechTimer);unbindMovementInput();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('pointercancel',pointerCancel);renderer.domElement.removeEventListener('click',click);renderer.domElement.removeEventListener('dblclick',doubleClick);renderer.domElement.removeEventListener('wheel',wheel);document.removeEventListener('visibilitychange',visibility);observer.disconnect();cozySpace.dispose();gardenSpace.dispose();socialSpace.dispose?.();infoRoom.dispose?.();renderer.dispose();for(const actor of [...botCharacters.values(),...visitors.values()])actor.emotion?.dispose();characterFactory.dispose();allResources.forEach(resource=>resource.dispose());overlay.remove();renderer.domElement.remove();}};
+  return {setRecruiterEncounter,attackRecruiter,getRecruiterFightState,endRecruiterFight,say,randomizeHair,goToJob,sitAt,standUp,zoom,recenter,setVisitors,setSeatOccupancy,setServerTime,setBotDefeats,bumpBot,canPushBot,pushBot,cancelBotChallenge,isNearBotSeat,getPlayerState,clearSeatRequest,isSeatReady(id){return !seatExit&&!seatEntry&&seated===id&&seatReady;},isSittingDown(){return !!seatEntry;},goToInfoRoom(){return walkToGround(new THREE.Vector3(0,0,25.5));},isStandingUp(){return !!seatExit;},setTalking(value){talking=!!value;},destroy(){running=false;pmRequestGeneration++;pmEmotion?.dispose();pmSpeech.remove();navigationGeneration++;if(seatExit){seatExit.resolve(false);seatExit=null;}cancelAnimationFrame(frame);clearTimeout(speechTimer);unbindMovementInput();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('pointercancel',pointerCancel);renderer.domElement.removeEventListener('click',click);renderer.domElement.removeEventListener('dblclick',doubleClick);renderer.domElement.removeEventListener('wheel',wheel);document.removeEventListener('visibilitychange',visibility);observer.disconnect();cozySpace.dispose();gardenSpace.dispose();socialSpace.dispose?.();infoRoom.dispose?.();renderer.dispose();for(const actor of [...botCharacters.values(),...visitors.values()])actor.emotion?.dispose();characterFactory.dispose();allResources.forEach(resource=>resource.dispose());overlay.remove();renderer.domElement.remove();}};
 }

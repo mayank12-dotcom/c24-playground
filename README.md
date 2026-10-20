@@ -1,9 +1,21 @@
 # Common Ground
 
 Source repository: [mayank12-dotcom/c24-playground](https://github.com/mayank12-dotcom/c24-playground).
-The repository includes the complete version 51 runtime, API, audio, tests,
+The repository includes the complete version 52 runtime, API, audio, tests,
 source scripts, previews and handoff notes. Generated build output, local
 credentials and large reproducible geometry dumps are excluded.
+
+Version 52 adds a playable encounter with the Product Manager recruiter. Any
+visitor can trigger it with three separate bumps into the recruiter or their
+chair; the third bump must hit the chair. Step back between contacts. The
+recruiter tumbles, gets up and approaches the challenger. The bottom controls
+show **J to punch**, **K to kick** and **Esc to step away**, with health for both
+characters. Closing the controls keeps J/K available. The chair and recruiter
+return smoothly when the encounter ends. One visitor owns the encounter at a
+time; shared visitors see its poses and attacks through the existing API.
+The nineteen ambient characters and their existing fight remain separate.
+The original navigation, white outlined characters, job flow and sound toggle
+are retained. See the version 52 section in `design-qa.md` for verification scope.
 
 Version 51 reshapes every character around the latest supplied 3D mannequin
 reference: a large spherical head above a compact tapered body, narrow relaxed
@@ -93,6 +105,7 @@ The rooms use distinct colors: dusty blue in the Studio, lavender in the Quiet L
 - Choose Class 24 in the navigation to walk to the information room. Reach an exhibit and single-click it to read its short dummy paragraph in the sidebar; distant clicks show a closer-approach hint.
 - Job descriptions appear only after sitting down, including after a bot leaves a won chair.
 - At a bot's chair, press Space or click Push once. The bot visibly tumbles onto the lawn beside the chair, pauses, recovers, and walks away. The visitor waits for the chair to clear, then sits smoothly. A blocked landing asks for more room before a push can be confirmed.
+- Bump the Product Manager recruiter or their chair three separate times, ending with the chair, to start a duel. Holding movement against it counts once. J punches, K kicks and Esc steps away. Move close and face the recruiter to land a hit. X hides the controls without ending combat. One real visitor can challenge this recruiter at a time; other connected visitors can watch.
 - Read the role in the sidebar; Apply starts the interview while seated.
 - All opportunities and Explore open the roster while keeping the visitor in their current chair. Choosing another role starts the smooth get-up and walk to its chair automatically; choosing the current role reopens its description without moving. Leave table & explore still explicitly gets up.
 - Movement keys close the job window and start a visible get-up animation: shift over planted feet, rise for about 0.75 seconds, then take the shortest clear departure at normal speed. A clear front exit is allowed; a table or backrest can require going around a side. The chair stays reserved until the visitor is clear; an object or another person pauses the entire transfer. Held keys resume walking after the exit, and a released tap leaves the visitor standing. Text fields retain normal typing and arrow-key behavior.
@@ -408,7 +421,7 @@ is claimed.
 
 Version 42 release verification: **215 focused checks across 17 test files passed**, including 19 selected actual-world checks. All 34 new seats have clear lobby routes, all nine shared sofas pass paired-body checks, and representative entry/exit and occupied-neighbor transfers pass actual skin/sole checks. The final production build, exact-byte HTTP delivery, all ten audio decodes, standalone inline JavaScript/audio validation, and ZIP restore integrity passed. The complete world suite was not rerun; no hands-on browser playtesting or Vercel deployment is claimed.
 
-The current version 51 release targets are `common-ground-v51.html`, `common-ground-v51.zip`, `common-ground-v51-vercel.zip`, and `common-ground-v51-MEMORY.md`. The standalone retains all ten embedded runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
+The current version 52 release targets are `common-ground-v52.html`, `common-ground-v52.zip`, `common-ground-v52-vercel.zip`, and `common-ground-v52-MEMORY.md`. The standalone retains all ten embedded runtime audio files and runs in solo mode. The source ZIP transfers the editable project and handoff notes; browser-local answers, settings, sessions, and live seat leases are not transferred.
 
 New integration checks execute actual world ticks, scene geometry, and character rigs with the GPU and DOM boundaries replaced. They cover body contacts, separate visitor spawn positions, a timed rise with grounded feet, paused or side departures around people, cancelled navigation, world teardown, and blocked seating arrivals. New checks measure pelvis, ankle, and wrist continuity through walking and lowering; remote entries retain their progress across heartbeats and pause when someone crosses their path. Information checks require proximity and preserve existing chats. A 600-tick scene keeps all 19 bots and the local visitor visible and separated through three bot departures. Independent randomized collision checks covered 17,665 sweeps and over 1.78 million sampled positions without penetration. These are automated simulations, not hands-on browser verification.
 
@@ -419,6 +432,10 @@ Reference-style character checks also require a closed white skin and measure ac
 Actual lounge geometry was rendered and inspected offline, including an overview, a furnished job lounge, a populated conversation lounge, the information reading nook, and third-person framing; see `artifacts/lounge-rooms-preview.png`. The tumble poses are shown in `artifacts/bot-push-preview.png`. This confirms scene arrangement and clear entrances, not browser interaction. The actual fight is captured in `artifacts/fight-storyboard.png`, including walking, bumping, arguing, punches, the shove, a grounded kick, recovery, and the audience. Interactive browser verification is still blocked by unavailable browser-control tools. The Redis Lua operation has not yet been executed against a configured Redis service, and this update has not been deployed to Vercel. See `design-qa.md` for these limits.
 
 ## Main files
+
+- `src/recruiter-combat.js`: deliberate contact gate, fall/recovery, playable duel and return controller.
+- `src/recruiter-controls.js`, `src/recruiter-controls.css`: bottom combat controls and keyboard handling.
+- `tests/recruiter-combat.test.js`, `tests/recruiter-controls.test.js`, `tests/recruiter-presence.test.js`, `tests/pm-recruiter-world.test.js`: focused recruiter checks. Redis Lua cases opt in through the dedicated disposable test socket; ordinary tests do not need production credentials.
 
 - `src/world.js`: 3D scene, characters, rear camera, movement, seating, and crowd rendering.
 - `src/garden-layout.js`: connected room floors, walls, doorways, straight halls, stable desks, planting, and shared physical bounds.
