@@ -1,5 +1,17 @@
 # Common Ground — version 50 handoff
 
+GitHub migration completed on 20 October 2026 (Asia/Calcutta). The user approved
+publishing the source in the public repository
+https://github.com/mayank12-dotcom/c24-playground on branch `main`.
+The initial import commit is `30aabec5c2f15e3dc2ff605fa6cf2080e512f79d`.
+All 189 tracked project files were uploaded, including ten runtime audio assets,
+the serverless API, all tests, source scripts, previews and this memory file.
+A fresh checkout passed production compilation, API import and Git integrity
+checks. Populated environment files, dependencies, build output, local tools,
+portable ZIP/HTML exports and three regenerable geometry dumps are ignored.
+The configured Git remote is `origin` at that repository. Source publishing does
+not configure the Vercel database or publish a new version of the website.
+
 Deployment access rechecked on 2026-10-19: Vercel plugin discovery still reports
 `DISABLED_BY_ADMIN` / `NOT_AVAILABLE`, and the enforced network allowlist excludes
 Vercel. Automatic approval review rejected an additional-network API check as an

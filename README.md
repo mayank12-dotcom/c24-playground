@@ -1,5 +1,10 @@
 # Common Ground
 
+Source repository: [mayank12-dotcom/c24-playground](https://github.com/mayank12-dotcom/c24-playground).
+The repository includes the complete version 50 runtime, API, audio, tests,
+source scripts, previews and handoff notes. Generated build output, local
+credentials and large reproducible geometry dumps are excluded.
+
 Version 50 makes the multiplayer connection state explicit. When the shared
 visitor API cannot be reached, the navbar now says “Live visitors unavailable”
 instead of “Explore at your own pace”; it returns to “Live visitors connected”
@@ -35,6 +40,8 @@ Version 42 makes every free chair, couch cushion, beanbag, armchair, and ottoman
 Requires Node.js 20.19+ or 22+.
 
 ```bash
+git clone https://github.com/mayank12-dotcom/c24-playground.git
+cd c24-playground
 npm ci
 npm run dev
 ```
