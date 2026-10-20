@@ -26,6 +26,33 @@ function originalNavigation(css) {
   return tree;
 }
 
+async function embedFonts(tree) {
+  const references = new Map();
+  tree.walkAtRules('import', () => {
+    assert.fail('Standalone CSS cannot depend on an imported stylesheet');
+  });
+  tree.walkAtRules('font-face', face => {
+    face.walkDecls('src', declaration => {
+      const urls = [...declaration.value.matchAll(/url\(\s*(?:(["'])(.*?)\1|([^\s)]+))\s*\)/g)];
+      assert(urls.length, 'Each font face must have an explicit WOFF2 source');
+      for (const match of urls) {
+        const url = match[2] ?? match[3];
+        assert(/^\/fonts\/[A-Za-z0-9][A-Za-z0-9._-]*\.woff2$/.test(url), 'Standalone fonts must use local public/fonts WOFF2 files');
+        if (!references.has(url)) references.set(url, []);
+        references.get(url).push({ declaration, original: match[0] });
+      }
+    });
+  });
+  assert(references.size, 'The original typography must be available as local fonts');
+  for (const [url, uses] of references) {
+    const bytes = await readFile(path.join(projectRoot, 'public', url.slice(1)));
+    assert.equal(bytes.subarray(0, 4).toString(), 'wOF2', `${url} must contain a WOFF2 font`);
+    const embedded = `url("data:font/woff2;base64,${bytes.toString('base64')}")`;
+    for (const { declaration, original } of uses) declaration.value = declaration.value.replaceAll(original, embedded);
+  }
+  return references.size;
+}
+
 export async function exportStandalone(outputPath) {
   assert(outputPath, 'Provide an output HTML path');
   const result = await build({
@@ -36,6 +63,9 @@ export async function exportStandalone(outputPath) {
     minify: true,
     target: 'es2022',
     format: 'iife',
+    // Vite serves these public assets as URLs. Retain them while bundling,
+    // then put their bytes directly in the portable document below.
+    external: ['/fonts/*'],
     write: false,
     logLevel: 'silent',
   });
@@ -44,20 +74,14 @@ export async function exportStandalone(outputPath) {
   assert(js && compiledCss, 'The application bundle must contain JavaScript and CSS');
 
   const compiled = postcss.parse(compiledCss);
-  const imports = [];
-  compiled.walkAtRules('import', rule => {
-    assert.equal(rule.parent, compiled, 'CSS imports must be at the top level');
-    imports.push(rule.clone());
-    rule.remove();
-  });
-  // A font URL contains semicolons. Preserve the complete parsed @import node,
-  // and move it before the viewport rules so browsers can apply the font import.
+  const fontAssets = await embedFonts(compiled);
   const combined = postcss.root();
-  combined.append(...imports);
   combined.append(...postcss.parse(await readFile(path.join(projectRoot, 'public/viewport.css'), 'utf8')).nodes);
   combined.append(...compiled.nodes);
   const css = combined.toString();
   originalNavigation(css);
+  assert(!/https?:\/\//i.test(css), 'Standalone styling cannot require an external connection');
+  assert(!/\/fonts\//.test(css), 'Standalone font bytes must be embedded');
   assert(!/<\/style/i.test(css), 'CSS cannot terminate the inline style element');
 
   const audioDirectory = path.join(projectRoot, 'public/audio');
@@ -96,7 +120,7 @@ export async function exportStandalone(outputPath) {
   const target = path.resolve(outputPath);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, html);
-  return { output: target, bytes: Buffer.byteLength(html), audioAssets: audioNames.length };
+  return { output: target, bytes: Buffer.byteLength(html), audioAssets: audioNames.length, fontAssets };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

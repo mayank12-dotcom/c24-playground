@@ -9,11 +9,11 @@ import postcss from 'postcss';
 import { exportStandalone } from '../scripts/export-standalone.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-let temporary, html, css, tree, script;
+let temporary, html, css, tree, script, exported;
 
 before(async () => {
   temporary = await mkdtemp(path.join(os.tmpdir(), 'common-ground-export-'));
-  await exportStandalone(path.join(temporary, 'prototype.html'));
+  exported = await exportStandalone(path.join(temporary, 'prototype.html'));
   html = await readFile(path.join(temporary, 'prototype.html'), 'utf8');
   css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
   script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -28,17 +28,48 @@ function rule(selector) {
   return Object.fromEntries(rules[0].nodes.filter(node => node.type === 'decl').map(node => [node.prop, node.value]));
 }
 
-test('the real standalone stylesheet parses and retains the complete font import before viewport rules', async () => {
+test('the real standalone stylesheet embeds the original local variable fonts byte for byte', async () => {
   const original = postcss.parse(await readFile(path.join(root, 'src/style.css'), 'utf8'));
-  const sourceImports = [];
-  original.walkAtRules('import', node => sourceImports.push(node.params.replace(/^url\((.*)\)$/, '$1').replace(/^['"]|['"]$/g, '')));
-  const imports = tree.nodes.filter(node => node.type === 'atrule' && node.name === 'import');
-  assert.equal(imports.length, 1);
-  assert.equal(imports[0].params.replace(/^url\((.*)\)$/, '$1').replace(/^['"]|['"]$/g, ''), sourceImports[0]);
-  assert.match(imports[0].params, /400;450;500;550;600;650;700/);
-  assert.match(imports[0].params, /Space\+Grotesk:wght@400;500;600;700&display=swap/);
-  assert.equal(tree.nodes.find(node => node.type !== 'comment'), imports[0]);
-  assert(!/(?:^|\n)450;500;550;600;650;700/.test(css), 'The broken font-URL tail must never reappear');
+  const faces = stylesheet => {
+    const found = [];
+    stylesheet.walkAtRules('font-face', face => found.push(Object.fromEntries(face.nodes
+      .filter(node => node.type === 'decl').map(node => [node.prop, node.value]))));
+    return found;
+  };
+  const sourceFaces = faces(original), embeddedFaces = faces(tree);
+  assert.equal(sourceFaces.length, 4, 'Both original families retain their Latin and extended Latin subsets');
+  assert.equal(embeddedFaces.length, sourceFaces.length);
+  assert.equal(exported.fontAssets, 4);
+  const unquote = value => value.replace(/^["']|["']$/g, '');
+  const ranges = value => value.toUpperCase().replace(/\s/g, '').split(',').map(range => {
+    const [start, end = start] = range.replace(/^U\+/, '').split('-');
+    return [parseInt(start.replace(/\?/g, '0'), 16), parseInt(end.replace(/\?/g, 'F'), 16)];
+  });
+  const families = new Set();
+  for (const [index, source] of sourceFaces.entries()) {
+    const embedded = embeddedFaces[index];
+    families.add(unquote(embedded['font-family']));
+    assert.equal(unquote(embedded['font-family']), unquote(source['font-family']));
+    assert.equal(embedded['font-style'], 'normal');
+    assert.equal(embedded['font-weight'], source['font-weight']);
+    assert.equal(embedded['font-display'], 'swap');
+    assert.deepEqual(ranges(embedded['unicode-range']), ranges(source['unicode-range']), 'Unicode subset coverage survives CSS minification');
+    const local = source.src.match(/url\(\s*["']?(\/fonts\/[A-Za-z0-9._-]+\.woff2)["']?\s*\)/)?.[1];
+    assert.ok(local, 'The source stylesheet must reference a local WOFF2 file');
+    const data = embedded.src.match(/url\(["']?data:font\/woff2;base64,([A-Za-z0-9+/=]+)["']?\)/)?.[1];
+    assert.ok(data, 'The exported face must contain its font bytes');
+    const bytes = Buffer.from(data, 'base64');
+    assert.ok(bytes.length > 1024, 'A real font subset is embedded rather than a placeholder');
+    assert.equal(bytes.subarray(0, 4).toString(), 'wOF2');
+    assert.deepEqual(bytes, await readFile(path.join(root, 'public', local.slice(1))), local);
+  }
+  assert.deepEqual([...families].sort(), ['DM Sans', 'Space Grotesk']);
+  let imports = 0;
+  tree.walkAtRules('import', () => imports++);
+  assert.equal(imports, 0, 'An external font stylesheet must never block the application bootstrap');
+  assert(!/fonts\.(?:googleapis|gstatic)\.com/i.test(css));
+  assert(!/\/fonts\//.test(css), 'A portable document needs no separate font requests');
+  assert(!/<link\b[^>]*rel=["']stylesheet["']/i.test(html), 'The complete styling is embedded');
 });
 
 test('the exported original cream navigation and colored buttons remain parsed CSS rules', () => {
