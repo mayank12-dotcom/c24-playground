@@ -12,8 +12,8 @@ function sourceLink(source) {
 
 /** Render information independently of the retained application/chat DOM. */
 export function renderInfoSidebar(root, object) {
-  const title = object.title || object.label || 'Class 24';
+  const title = object.title || object.label || 'CARS24';
   const sections = Array.isArray(object.sections) ? object.sections : [];
-  root.innerHTML = `<div class="info-sidebar-body"><span class="eyebrow">CLASS 24</span><h3>${escapeHTML(title)}</h3><p class="info-intro">${escapeHTML(object.summary)}</p>${sections.map(section => `<section class="info-section"><h4>${escapeHTML(section.title)}</h4><p>${escapeHTML(section.body)}</p></section>`).join('')}${sourceLink(object.source)}</div>`;
+  root.innerHTML = `<div class="info-sidebar-body"><span class="eyebrow">CARS24</span><h3>${escapeHTML(title)}</h3><p class="info-intro">${escapeHTML(object.summary)}</p>${sections.map(section => `<section class="info-section"><h4>${escapeHTML(section.title)}</h4><p>${escapeHTML(section.body)}</p></section>`).join('')}${sourceLink(object.source)}</div>`;
   root.setAttribute('aria-label', `${title} information`);
 }

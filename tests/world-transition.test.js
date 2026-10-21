@@ -844,7 +844,7 @@ test('a remote visitor can leave a beanbag completely without losing their own f
 test('combined room walls and furniture leave every job chair, shared seat, and gallery exhibit connected through doorways', t => {
   const ui=setup(t,{jobs:allJobs});
   const bounds = inflateObstacles(ui.fixture.physicalBounds);
-  assert.equal(bounds.filter(object=>object.kind==='information-lounge').length,5,'the combined route checks include all Class 24 lounge furniture');
+  assert.equal(bounds.filter(object=>object.kind==='information-lounge').length,5,'the combined route checks include all CARS24 lounge furniture');
   const isBlocked = (x,z) => bounds.some(object => Math.abs(x-object.x)<object.halfX && Math.abs(z-object.z)<object.halfZ);
   assert.equal(bounds.filter(object=>object.kind==='room-wall').length,GARDEN_WALLS.length,'visible partitions are included in the actual world collision and routing bounds');
   assert.ok(GARDEN_ROOMS.every(room=>bounds.some(object=>object.kind==='room-wall'&&object.roomId===room.id)),'all eight rooms have solid edges');

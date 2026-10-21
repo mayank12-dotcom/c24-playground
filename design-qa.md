@@ -407,7 +407,7 @@ has not been deployed to Vercel.
 ## Spacious social campus and continuous seating
 
 The campus now has eight rooms: five workrooms with varied width/depth, two
-desk-free social rooms, and a Class 24 information room. Workrooms are deeper,
+desk-free social rooms, and a CARS24 information room. Workrooms are deeper,
 and 24 sparse room-level props replace 54 repeated per-desk furnishings. Nine
 job coordinates remain stable. Twenty actual doorways and branching paths reach
 the new side rooms and central gallery promenade. Warm floors, flat sage lawn
@@ -437,7 +437,7 @@ All characters start bald, with optional hairstyles available through A fresh
 look. Hairstyle 5 represents the bald appearance throughout client and server.
 
 The navigation is full width and flush with the top, left, and right edges.
-Its Class 24 button walks to the new room. Five solid exhibits each show a short
+Its CARS24 button walks to the new room. Five solid exhibits each show a short
 dummy paragraph, as explicitly requested; real information can be added later
 in src/info-content.js. A single exhibit click requires proximity. A distant
 click neither opens content nor starts walking. Information occupies a separate
@@ -547,7 +547,7 @@ and ivory. Broader ambient light and warmer, softer directional light support
 the same outlined character style. The garden stays open, with no new walls.
 
 Both social lounges gain low tables and reading accessories around their
-existing shared seats. The arrival lounges add compact loveseats. Class 24
+existing shared seats. The arrival lounges add compact loveseats. CARS24
 adds two reading sofas, rugs, side tables, books, and a lamp while preserving
 the five exhibit positions and nearby-click interactions. Solid additions have
 collision bounds. The available-seats FAB remains at the bottom-right and
@@ -845,7 +845,7 @@ the update has not been deployed to Vercel.
 ## Connected lounge rooms — version 32
 
 The previous oval open zones are now eight rectangular rooms: five job lounges,
-two social rooms, and the Class 24 information room. Straight shared hallways
+two social rooms, and the CARS24 information room. Straight shared hallways
 and a rectangular arrival lobby link 20 physical doorway openings. All nine
 job stations, furniture positions, four free lounge seats, and crowd circuits
 retain their shared coordinates. Color finishes and white character bodies
@@ -1169,7 +1169,7 @@ onset above 0.01 is 6.122 ms. Full FFmpeg decoding passes. Evidence is
 manual listening quality.
 
 A dismissal whoosh follows a visible user close of the opportunity/job/chat/
-Class 24 sidebar by X, FAB, Escape, or Class 24 navigation; Help by X,
+CARS24 sidebar by X, FAB, Escape, or CARS24 navigation; Help by X,
 toggle-close, or Escape; the bot challenge by X or Escape; and the explicit
 Leave table action. Programmatic seating, navigation, and lifecycle closures,
 opening a view, hidden repeated closes, and toast expiry remain silent. A single

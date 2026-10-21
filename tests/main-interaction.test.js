@@ -763,7 +763,7 @@ test('information uses a separate panel body and preserves the seated chat draft
   ui.calls.length = 0;
   ui.worldConfig.onInfoSelect({ id: 'info-story', title: 'Our story', summary: 'A placeholder introduction.', sections: [{ title: 'A little context', body: 'More to come.' }] });
   assert.equal(ui.node('opportunity-panel').hidden, false);
-  assert.equal(ui.node('opportunity-title').textContent, 'Class 24');
+  assert.equal(ui.node('opportunity-title').textContent, 'CARS24');
   assert.equal(retainedChat.hidden, true);
   assert.equal(ui.node('info-sidebar').hidden, false);
   assert.match(ui.node('info-sidebar').innerHTML, /Our story/);
@@ -819,7 +819,7 @@ test('information selections from an obsolete world cannot replace the current p
   assert.doesNotMatch(ui.node('info-sidebar').innerHTML, /Obsolete room/);
 });
 
-test('the Class 24 navigation button walks to the room without opening information remotely', () => {
+test('the CARS24 navigation button walks to the room without opening information remotely', () => {
   const ui = setup();
   ui.node('seats-toggle').fire('click');
   const gesture = { type: 'click', isTrusted: true };

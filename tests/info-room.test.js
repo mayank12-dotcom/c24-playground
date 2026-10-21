@@ -22,7 +22,7 @@ function fixture() {
   return { scene, room, allResources, dispose() { room.dispose(); for (const resource of allResources) resource.dispose(); } };
 }
 
-test('the Class 24 gallery has five distinct objects, short placeholder content, and a clear entrance aisle', () => {
+test('the CARS24 gallery has five distinct objects, short placeholder content, and a clear entrance aisle', () => {
   assert.equal(INFO_OBJECTS.length, 5);
   assert.equal(new Set(INFO_OBJECTS.map(object => object.id)).size, 5);
   assert.equal(new Set(INFO_OBJECTS.map(object => object.kind)).size, 5);

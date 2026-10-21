@@ -41,7 +41,7 @@ export const GARDEN_ROOMS = [
   { id: 'loft', name: 'Collaboration Studio', kind: 'workspace', x: 6.5, z: -31, width: 23, depth: 10.5, workspaceIndices: [7, 8], palette: 'butter' },
   { id: 'social-common', name: 'Team Lounge', kind: 'social', x: -29, z: -18, width: 14, depth: 11, workspaceIndices: [], palette: 'clay', entranceSide: 'front', pathZ: -10 },
   { id: 'social-reading', name: 'Reading Room', kind: 'social', x: 29, z: -32, width: 15, depth: 11, workspaceIndices: [], palette: 'lavender', entranceSide: 'front', pathZ: -24 },
-  { id: 'class24-info', name: 'Class 24', kind: 'information', x: 0, z: 26, width: 14, depth: 10, workspaceIndices: [], palette: 'blue', entranceSide: 'back', pathZ: 18 },
+  { id: 'class24-info', name: 'CARS24', kind: 'information', x: 0, z: 26, width: 14, depth: 10, workspaceIndices: [], palette: 'blue', entranceSide: 'back', pathZ: 18 },
 ];
 
 export const GARDEN_WORKSPACES = workspacePositions.map(([x, z], index) => ({

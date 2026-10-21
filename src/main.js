@@ -98,8 +98,8 @@ const opportunityPanel = createFloatingPanel({ panel: $('opportunity-panel'), to
 function setPanelMode(mode) {
   $('sidebar').hidden = mode !== 'jobs';
   $('info-sidebar').hidden = mode !== 'info';
-  $('opportunity-title').textContent = mode === 'info' ? 'Class 24' : 'Your Current Next Chapter';
-  $('panel-close').setAttribute('aria-label', mode === 'info' ? 'Close Class 24 information' : 'Close Your Current Next Chapter');
+  $('opportunity-title').textContent = mode === 'info' ? 'CARS24' : 'Your Current Next Chapter';
+  $('panel-close').setAttribute('aria-label', mode === 'info' ? 'Close CARS24 information' : 'Close Your Current Next Chapter');
 }
 
 function syncSeatedNudge(panelOpen = opportunityPanel.isOpen()) {
